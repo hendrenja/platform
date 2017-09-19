@@ -293,6 +293,8 @@ corto_ll corto_opendir(const char *name) {
             }
         }
         closedir (dp);
+    } else {
+        printError(errno, name);
     }
 
     return result;
@@ -306,3 +308,59 @@ void corto_closedir(corto_ll dir) {
     }
     corto_ll_free(dir);
 }
+
+static
+bool corto_dir_hasNext(
+    corto_iter *it) 
+{
+    struct dirent *ep = readdir(it->ctx);
+    while (ep && *ep->d_name == '.') {
+        ep = readdir(it->ctx);
+    }
+
+    if (ep) {
+        it->data = ep->d_name;
+    }
+
+    return ep ? true : false;
+}
+
+static
+void* corto_dir_next(
+    corto_iter *it) 
+{
+    return it->data;
+}
+
+static
+void corto_dir_release(
+    corto_iter *it) 
+{
+    closedir(it->ctx);
+}
+
+int16_t corto_dir_iter(
+    const char *name, 
+    corto_iter *it_out)
+{
+    corto_iter result = {
+        .ctx = opendir(name),
+        .data = NULL,
+        .hasNext = corto_dir_hasNext,
+        .next = corto_dir_next,
+        .release = corto_dir_release
+    };
+
+    if (!result.ctx) {
+        printError(errno, name);
+        goto error;
+    }
+
+    *it_out = result;
+
+    return 0;
+error:
+    return -1;
+}
+
+

@@ -63,6 +63,19 @@ CORTO_EXPORT
 void corto_closedir(
     corto_ll dir);
 
+/** Returns contents of a directory in iterator.
+ * Resources will be automatically cleaned up when the iterator yields no more
+ * results. When iteration is prematurely stopped, call corto_iter_release.
+ *
+ * @param name The name of the directory to open. 
+ * @param iter_out Iterator to contents in directory.
+ * @return 0 if success, non-zero if failed.
+ */
+CORTO_EXPORT
+int16_t corto_dir_iter(
+    const char *name,
+    corto_iter *iter_out);
+
 /** Creates an empty file. 
  *
  * @param name Name of the file.

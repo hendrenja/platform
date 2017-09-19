@@ -449,7 +449,7 @@ bool corto_ll_iterMoveTo(corto_iter *iter, void *o) {
 }
 
 /* Can the iterator provide a 'next' value */
-int corto_ll_iterHasNext(corto_iter* iter) {
+bool corto_ll_iterHasNext(corto_iter* iter) {
     corto_assert(iter->ctx != NULL, "iterator context not set");
     return corto_iterData(*iter)->next != 0;
 }

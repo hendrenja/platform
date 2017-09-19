@@ -22,4 +22,6 @@ void base_init(char *appName) {
     if (corto_tls_new(&CORTO_KEY_THREAD_STRING, corto_threadStringDealloc)) {
         corto_critical("failed to obtain tls key for thread admin");
     }
+
+    CORTO_APP_STATUS = 0;
 }

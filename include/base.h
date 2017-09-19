@@ -237,8 +237,9 @@ typedef struct corto_ll_s* corto_ll;
 /* Iterator type */
 typedef struct corto_iter corto_iter;
 struct corto_iter {
-    int (*hasNext)(corto_iter*);
     void *ctx;
+    void *data;
+    bool (*hasNext)(corto_iter*);
     void* (*next)(corto_iter*);
     void* (*nextPtr)(corto_iter*);
     void (*release)(corto_iter*);
@@ -297,5 +298,6 @@ CORTO_EXPORT void base_init(char *appName);
 #include <include/proc.h>
 #include <include/idmatch.h>
 #include <include/jsw_rbtree.h>
+#include <include/path.h>
 
 #endif /* CORTO_BASE_H */
