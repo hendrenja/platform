@@ -274,6 +274,8 @@ struct jsw_rbtrav {
 CORTO_EXPORT extern int8_t CORTO_APP_STATUS;
 CORTO_EXPORT extern int8_t CORTO_BACKTRACE_ENABLED;
 
+CORTO_EXPORT void base_init(char *appName);
+
 #ifdef __cplusplus
 }
 #endif

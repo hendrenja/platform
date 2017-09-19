@@ -21,10 +21,10 @@
 
 #include <include/base.h>
 
+char *corto_log_appName = "";
+extern corto_mutex_s corto_log_lock;
 static corto_tls corto_errKey = 0;
-extern corto_mutex_s corto_adminLock;
 static corto_log_verbosity CORTO_LOG_LEVEL = CORTO_INFO;
-extern char *corto_appName;
 static char *corto_log_fmt_application;
 static char *corto_log_fmt_current = CORTO_LOGFMT_DEFAULT;
 
@@ -202,12 +202,12 @@ corto_log_handler corto_log_handlerRegister(
         result->compiled_category_filter = NULL;
     }
 
-    corto_mutex_lock(&corto_adminLock);
+    corto_mutex_lock(&corto_log_lock);
     if (!corto_log_handlers) {
         corto_log_handlers = corto_ll_new();
     }
     corto_ll_append(corto_log_handlers, result);
-    corto_mutex_unlock(&corto_adminLock);
+    corto_mutex_unlock(&corto_log_lock);
 
     return result;
 error:
@@ -219,13 +219,13 @@ void corto_log_handlerUnregister(corto_log_handler cb)
 {
     struct corto_log_handler* callback = cb;
     if (callback) {
-        corto_mutex_lock(&corto_adminLock);
+        corto_mutex_lock(&corto_log_lock);
         corto_ll_remove(corto_log_handlers, callback);
         if (!corto_ll_size(corto_log_handlers)) {
             corto_ll_free(corto_log_handlers);
             corto_log_handlers = NULL;
         }
-        corto_mutex_unlock(&corto_adminLock);
+        corto_mutex_unlock(&corto_log_lock);
 
         if (callback->category_filter) corto_dealloc(callback->category_filter);
         if (callback->auth_token) corto_dealloc(callback->auth_token);
@@ -426,7 +426,7 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categorys[],
             case 'f': ret = corto_logprint_file(&buf, file); break;
             case 'l': ret = corto_logprint_line(&buf, line); break;
             case 'm': ret = corto_logprint_msg(&buf, msg); break;
-            case 'a': corto_buffer_append(&buf, "%s%s%s", CORTO_CYAN, corto_appName, CORTO_NORMAL); break;
+            case 'a': corto_buffer_append(&buf, "%s%s%s", CORTO_CYAN, corto_log_appName, CORTO_NORMAL); break;
             default:
                 corto_buffer_appendstr(&buf, "%");
                 corto_buffer_appendstrn(&buf, &fmtptr[1], 1);
@@ -538,7 +538,7 @@ corto_log_verbosity corto_logv(char const *file, unsigned int line, corto_log_ve
         }
 
         if (corto_log_handlers) {
-            corto_mutex_lock(&corto_adminLock);
+            corto_mutex_lock(&corto_log_lock);
             if (corto_log_handlers) {
                 corto_iter it = corto_ll_iter(corto_log_handlers);
                 while (corto_iter_hasNext(&it)) {
@@ -550,7 +550,7 @@ corto_log_verbosity corto_logv(char const *file, unsigned int line, corto_log_ve
                         msgBody);
                 }
             }
-            corto_mutex_unlock(&corto_adminLock);
+            corto_mutex_unlock(&corto_log_lock);
         }
 
         if (alloc) {
@@ -745,12 +745,6 @@ void corto_log_verbositySet(corto_log_verbosity level) {
     }
 
     CORTO_LOG_LEVEL = level;
-
-    if (level == CORTO_DEBUG) {
-        CORTO_DEBUG_ENABLED = 1;
-    } else {
-        CORTO_DEBUG_ENABLED = 0;
-    }
 }
 
 corto_log_verbosity corto_log_verbosityGet() {
