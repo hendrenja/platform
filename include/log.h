@@ -127,13 +127,13 @@ void corto_log_fmt(
  * @return Zero if success, non-zero if failed (max number of categories pushed).
  */
 CORTO_EXPORT 
-int corto_log_categoryPush(
+int corto_log_push(
     char *category);
 
 /** Pop a category from the category stack.
  */
 CORTO_EXPORT 
-void corto_log_categoryPop(void);
+void corto_log_pop(void);
 
 
 

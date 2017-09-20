@@ -38,7 +38,7 @@ typedef struct corto_errThreadData {
     char* lastError;
     char* backtrace;
     bool viewed;
-    char *categorys[CORTO_MAX_LOG_COMPONENTS + 1];
+    char *categories[CORTO_MAX_LOG_COMPONENTS + 1];
 } corto_errThreadData;
 
 struct corto_log_handler {
@@ -240,7 +240,7 @@ bool corto_log_handlersRegistered(void) {
 
 void corto_err_notifyCallkback(
     corto_log_handler cb,
-    char *categorys[],
+    char *categories[],
     corto_log_verbosity level, 
     char *msg)
 {
@@ -250,9 +250,9 @@ void corto_err_notifyCallkback(
         if (callback->compiled_category_filter) {
             corto_buffer buff = CORTO_BUFFER_INIT;
             int32_t i;
-            for (i = 0; categorys[i]; i++) {
+            for (i = 0; categories[i]; i++) {
                 if (i) corto_buffer_appendstr(&buff, "/");
-                corto_buffer_appendstr(&buff, categorys[i]);
+                corto_buffer_appendstr(&buff, categories[i]);
             }
             char *str = corto_buffer_str(&buff);
             if (!corto_idmatch_run(callback->compiled_category_filter, str)) {
@@ -262,22 +262,22 @@ void corto_err_notifyCallkback(
         }
 
         if (filterMatch) {
-            callback->cb(level, categorys, msg, callback->ctx);
+            callback->cb(level, categories, msg, callback->ctx);
         }
     }
 }
 
 #define CORTO_MAX_LOG (1024)
 
-static char* corto_log_categoryString(char *categorys[]) {
+static char* corto_log_categoryString(char *categories[]) {
     int32_t i = 0;
     corto_buffer buff = CORTO_BUFFER_INIT;
 
-    while (categorys[i]) {
+    while (categories[i]) {
         corto_buffer_append(&buff, "%s%s%s", 
-            CORTO_MAGENTA, categorys[i], CORTO_NORMAL);
+            CORTO_MAGENTA, categories[i], CORTO_NORMAL);
         i ++;
-        if (categorys[i]) {
+        if (categories[i]) {
             corto_buffer_appendstr(&buff, ".");
         }
     }
@@ -362,8 +362,8 @@ static void corto_logprint_friendlyTime(corto_buffer *buf, struct timespec t) {
     corto_buffer_append(buf, "%s.%.4d", tbuff, t.tv_nsec / 100000);
 }
 
-static int corto_logprint_categorys(corto_buffer *buf, char *categorys[]) {
-    char *categoryStr = categorys ? corto_log_categoryString(categorys) : NULL;
+static int corto_logprint_categories(corto_buffer *buf, char *categories[]) {
+    char *categoryStr = categories ? corto_log_categoryString(categories) : NULL;
     if (categoryStr) {
         corto_buffer_appendstr(buf, categoryStr);
         corto_dealloc(categoryStr);
@@ -406,7 +406,7 @@ static int corto_logprint_line(corto_buffer *buf, uint64_t line) {
     }
 }
 
-static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categorys[], char const *file, uint64_t line, char *msg) {
+static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categories[], char const *file, uint64_t line, char *msg) {
     size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT;
     char *fmtptr, ch;
@@ -422,7 +422,7 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categorys[],
             case 't': corto_logprint_time(&buf, now); break;
             case 'v': corto_logprint_kind(&buf, kind); break;
             case 'k': corto_logprint_kind(&buf, kind); break; /* Deprecated */
-            case 'c': ret = corto_logprint_categorys(&buf, categorys); break;
+            case 'c': ret = corto_logprint_categories(&buf, categories); break;
             case 'f': ret = corto_logprint_file(&buf, file); break;
             case 'l': ret = corto_logprint_line(&buf, line); break;
             case 'm': ret = corto_logprint_msg(&buf, msg); break;
@@ -473,20 +473,20 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categorys[],
     corto_dealloc(str);
 }
 
-static char* corto_log_parseComponents(char *categorys[], char *msg) {
+static char* corto_log_parseComponents(char *categories[], char *msg) {
     char *ptr, *prev = msg, ch;
     int count = 0;
     corto_errThreadData *data = corto_getThreadData();
 
-    while (data->categorys[count]) {
-        categorys[count] = data->categorys[count];
+    while (data->categories[count]) {
+        categories[count] = data->categories[count];
         count ++;
     }
 
     for (ptr = msg; (ch = *ptr) && (isalpha(ch) || isdigit(ch) || (ch == ':') || (ch == '/') || (ch == '_')); ptr++) {
         if ((ch == ':') && (ptr[1] == ' ')) {
             *ptr = '\0';
-            categorys[count ++] = prev;
+            categories[count ++] = prev;
             ptr ++;
             prev = ptr + 1;
             if (count == CORTO_MAX_LOG_COMPONENTS) {
@@ -495,7 +495,7 @@ static char* corto_log_parseComponents(char *categorys[], char *msg) {
         }
     }
 
-    categorys[count] = NULL;
+    categories[count] = NULL;
 
     return prev;
 }
@@ -515,7 +515,7 @@ corto_log_verbosity corto_logv(char const *file, unsigned int line, corto_log_ve
     if (kind >= CORTO_LOG_LEVEL || corto_log_handlers) {
         char* alloc = NULL;
         char buff[CORTO_MAX_LOG + 1];
-        char *categorys[CORTO_MAX_LOG_COMPONENTS];
+        char *categories[CORTO_MAX_LOG_COMPONENTS];
         size_t n = 0;
 
         char* msg = buff, *msgBody;
@@ -531,10 +531,10 @@ corto_log_verbosity corto_logv(char const *file, unsigned int line, corto_log_ve
             msg = alloc;
         }
 
-        msgBody = corto_log_parseComponents(categorys, msg);
+        msgBody = corto_log_parseComponents(categories, msg);
 
         if (kind >= CORTO_LOG_LEVEL) {
-            corto_logprint(f, kind, categorys, file, line, msgBody);
+            corto_logprint(f, kind, categories, file, line, msgBody);
         }
 
         if (corto_log_handlers) {
@@ -545,7 +545,7 @@ corto_log_verbosity corto_logv(char const *file, unsigned int line, corto_log_ve
                     corto_log_handler callback = corto_iter_next(&it);
                     corto_err_notifyCallkback(
                         callback,
-                        categorys,
+                        categories,
                         kind,
                         msgBody);
                 }
@@ -606,10 +606,31 @@ void corto_infov(char const *file, unsigned int line, char* fmt, va_list args) {
 }
 
 void corto_seterrv(char *fmt, va_list args) {
-    char *err = NULL;
+    char *err = NULL, *categories = NULL;
+    corto_errThreadData *data = corto_getThreadData();
+    int count = 0;
+
+    /* Include current categories in error message */
+    if (data) {
+        corto_buffer buff = CORTO_BUFFER_INIT;
+        while (data->categories[count]) {
+            corto_buffer_append(&buff, "%s: ", data->categories[count]);
+            count ++;
+        }
+        categories = corto_buffer_str(&buff);
+    }
+
     if (fmt) {
         err = corto_vasprintf(fmt, args);
     }
+
+    if (categories && err) {
+        char *fullErr = corto_asprintf("%s %s", categories, err);
+        free(categories);
+        free(err);
+        err = fullErr;
+    }
+
     corto_setLastError(err);
 
     if (fmt && ((corto_log_verbosityGet() == CORTO_DEBUG) || CORTO_APP_STATUS)) {
@@ -623,7 +644,7 @@ void corto_seterrv(char *fmt, va_list args) {
         corto_backtrace(stderr);
     }
 
-    corto_dealloc(err);
+    if (err) corto_dealloc(err);
 }
 
 void corto_setmsgv(char *fmt, va_list args) {
@@ -751,29 +772,30 @@ corto_log_verbosity corto_log_verbosityGet() {
     return CORTO_LOG_LEVEL;
 }
 
-int corto_log_categoryPush(char *category) {
+int corto_log_push(char *category) {
     corto_errThreadData *data = corto_getThreadData();
     int i = 0;
-    while (data->categorys[i] && (i < CORTO_MAX_LOG_COMPONENTS)) {
+    while (data->categories[i] && (i < CORTO_MAX_LOG_COMPONENTS)) {
         i ++;
     }
 
-    if (!data->categorys[i]) {
-        if (data->categorys[i]) free(data->categorys[i]);
-        data->categorys[i] = category ? strdup(category) : NULL;
+    if (!data->categories[i]) {
+        if (data->categories[i]) free(data->categories[i]);
+        data->categories[i] = category ? strdup(category) : NULL;
         return 0;
     } else {
         return -1;
     }
 }
 
-void corto_log_categoryPop(void) {
+void corto_log_pop(void) {
     corto_errThreadData *data = corto_getThreadData();
     int i = CORTO_MAX_LOG_COMPONENTS;
-    while (!data->categorys[i] && i) {
+    while (!data->categories[i] && i) {
         i --;
     }
-    if (data->categorys[i]) free(data->categorys[i]);
-    data->categorys[i] = NULL;
+
+    if (data->categories[i]) free(data->categories[i]);
+    data->categories[i] = NULL;
 }
 
