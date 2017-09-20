@@ -49,6 +49,15 @@ char* corto_path_clean(
     char *buf, 
     char *path);
 
+/** Get directory name from path.
+ *
+ * @param path The input path.
+ * @return The directory name from the specified path. Needs to be deallocated.
+ */
+CORTO_EXPORT
+char* corto_path_dirname(
+    const char *path);
+
 #ifdef __cplusplus
 }
 #endif

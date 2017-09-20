@@ -23,5 +23,33 @@ void base_init(char *appName) {
         corto_critical("failed to obtain tls key for thread admin");
     }
 
+    char *verbosity = corto_getenv("CORTO_VERBOSITY");
+    if (verbosity) {
+        if (!strcmp(verbosity, "DEBUG")) {
+            corto_log_verbositySet(CORTO_DEBUG);
+        }
+        if (!strcmp(verbosity, "TRACE")) {
+            corto_log_verbositySet(CORTO_TRACE);
+        }
+        if (!strcmp(verbosity, "OK")) {
+            corto_log_verbositySet(CORTO_OK);
+        }
+        if (!strcmp(verbosity, "INFO")) {
+            corto_log_verbositySet(CORTO_INFO);
+        }
+        if (!strcmp(verbosity, "WARNING")) {
+            corto_log_verbositySet(CORTO_WARNING);
+        }
+        if (!strcmp(verbosity, "ERROR")) {
+            corto_log_verbositySet(CORTO_ERROR);
+        }
+        if (!strcmp(verbosity, "CRITICAL")) {
+            corto_log_verbositySet(CORTO_CRITICAL);
+        }
+        if (!strcmp(verbosity, "ASSERT")) {
+            corto_log_verbositySet(CORTO_ASSERT);
+        }
+    }
+
     CORTO_APP_STATUS = 0;
 }

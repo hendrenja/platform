@@ -28,7 +28,6 @@
 #define CORTO_BASE_H
 
 #include <include/_project.h>
-#include <include/os.h>
 
 /* Standard C library */
 #include <alloca.h>
@@ -46,7 +45,7 @@
 #include <time.h>
 
 /* OS-specific headers */
-#ifdef CORTO_OS_WINDOWS
+#if defined(WIN32) || defined(WIN64)
 #include <windows.h>
 #else
 #include <fnmatch.h>
@@ -282,6 +281,7 @@ CORTO_EXPORT void base_init(char *appName);
 #endif
 
 /* Base includes */
+#include <include/os.h>
 #include <include/buffer.h>
 #include <include/iter.h>
 #include <include/ll.h>

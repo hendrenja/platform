@@ -114,3 +114,19 @@ char* corto_path_clean(char *buf, char *path) {
 
     return path;
 }
+
+char* corto_path_dirname(
+    const char *path)
+{
+    char *result = strdup(path);
+
+    char *ptr = strrchr(result, '/');
+    if (ptr) {
+        ptr[0] = '\0';
+    } else {
+        result = strdup("");
+    }
+
+    return result;
+}
+

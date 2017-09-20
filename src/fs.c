@@ -176,8 +176,7 @@ int corto_cp(const char *sourcePath, const char *destinationPath) {
         sprintf(msg, "cannot obtain filesize from file %s", sourcePath);
         goto error_CloseFiles;
     }
-    /* Now we can be sure that fileSizeResult doesn't contain a
-     * negative value */
+
     fileSize = fileSizeResult;
 
     rewind(sourceFile);
@@ -214,6 +213,57 @@ error_CloseFiles:
     fclose(destinationFile);
 error:
     printError(_errno, msg);
+    return -1;
+}
+
+int corto_symlink(
+    const char *oldname,
+    const char *newname) 
+{
+    char *fullname = NULL;
+    if (oldname[0] != '/') {
+        fullname = corto_asprintf("%s/%s", corto_cwd(), oldname);
+        corto_path_clean(fullname, fullname);
+    } else {
+        /* Safe- the variable will not be modified if it's equal to newname */
+        fullname = (char*)oldname;
+    }
+
+    if (symlink(fullname, newname)) {
+
+        if (errno == ENOENT) {
+            /* If error is ENOENT, try creating directory */
+            char *dir = corto_path_dirname(newname);
+            int old_errno = errno;
+
+            if (dir[0] && !corto_mkdir(dir)) {
+                /* Retry */
+                if (corto_symlink(fullname, newname)) {
+                    goto error;
+                }
+            } else {
+                printError(old_errno, newname);
+            }
+            free(dir);
+
+        } else if (errno == EEXIST) {
+            /* If a file with specified name already exists, remove existing file */
+            if (corto_rm(newname)) {
+                goto error;
+            }
+
+            /* Retry */
+            if (corto_symlink(fullname, newname)) {
+                goto error;
+            }
+        }
+    }
+
+    if (fullname != oldname) free(fullname);
+    return 0;
+error:
+    if (fullname != oldname) free(fullname);
+    corto_seterr("symlink: %s", corto_lasterr());
     return -1;
 }
 
@@ -360,7 +410,57 @@ int16_t corto_dir_iter(
 
     return 0;
 error:
+    corto_seterr("dir_iter: %s", corto_lasterr());
     return -1;
 }
 
+corto_dirstack corto_dirstack_push(
+    corto_dirstack stack,
+    const char *dir)
+{
+    if (!stack) {
+        stack = corto_ll_new();
+    }
+
+    corto_ll_append(stack, strdup(corto_cwd()));
+
+    if (corto_chdir(dir)) {
+        goto error;
+    }
+
+    return stack;
+error:
+    corto_seterr("dirstack_push: %s", corto_lasterr());
+    return NULL;
+}
+
+int16_t corto_dirstack_pop(
+    corto_dirstack stack)
+{
+    char *dir = corto_ll_takeLast(stack);
+
+    if (corto_chdir(dir)) {
+        goto error;
+    }
+
+    return 0;
+error:
+    corto_seterr("dirstack_pop: %s", corto_lasterr());
+    return -1;
+}
+
+const char* corto_dirstack_wd(
+    corto_dirstack stack)
+{
+    if (!stack || corto_ll_size(stack) == 1) {
+        return ".";
+    }
+
+    char *first = corto_ll_get(stack, 0);
+    char *last = corto_ll_last(stack);
+    char *result = last - strlen(first);
+    if (result[0] == '/') result ++;
+
+    return result;
+}
 

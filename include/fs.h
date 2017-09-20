@@ -76,6 +76,47 @@ int16_t corto_dir_iter(
     const char *name,
     corto_iter *iter_out);
 
+/** Type holding a stack for usage with corto_dir_push / corto_dir_pop */
+typedef void* corto_dirstack;
+
+/** Change working directory, push to stack.
+ * This function facilitates recursively walking through directories by being
+ * able to keep track of a history of previously visited directories.
+ *
+ * The working directory will be changed to the specified directory. Each push
+ * has to be followed up by a pop, otherwise resources will leak.
+ * 
+ * @param stack A stack object as returned by this function. NULL if this is the first call.
+ * @param dir Directory to be pushed to stack.
+ * @return Stack object if success, NULL if failed.
+ */
+CORTO_EXPORT
+corto_dirstack corto_dirstack_push(
+    corto_dirstack stack,
+    const char *dir);
+
+/** Restore working directory, pop from stack.
+ * This function facilitates recursively walking through directories by being
+ * able to keep track of a history of previously visited directories.
+ *
+ * The working directory will be changed to previous directory on the stack.
+ * 
+ * @param stack A stack object as returned by corto_dirstack_push.
+ * @return 0 if success, non-zero if failed.
+ */
+CORTO_EXPORT
+int16_t corto_dirstack_pop(
+    corto_dirstack stack);
+
+/** Obtain working directory relative to bottom of directory stack.
+ * 
+ * @param stack A stack object as returned by corto_dirstack_push.
+ * @return Relative path. This value does not need to be freed.
+ */
+CORTO_EXPORT
+const char* corto_dirstack_wd(
+    corto_dirstack stack);
+
 /** Creates an empty file. 
  *
  * @param name Name of the file.
@@ -111,6 +152,19 @@ CORTO_EXPORT
 int corto_cp(
     const char *source, 
     const char *destination);
+
+/** Create a symbolic link.
+ * On operating systems where symbolic links are not supported, this function
+ * may revert to doing a copy of the file.
+ *
+ * @param oldname Name of the file to link to.
+ * @param newname Name of the link.
+ * @return 0 if success, non-zero if failed.
+ */
+CORTO_EXPORT 
+int corto_symlink(
+    const char *oldname,
+    const char *newname);
 
 /** Test if name is a directory.
  *

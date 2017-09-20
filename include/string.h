@@ -52,8 +52,8 @@ int stricmp(
 CORTO_EXPORT 
 int strnicmp(
     const char *str1, 
-    int length, const 
-    char *str2);
+    int length, 
+    const char *str2);
 
 /** Compare strings insensitive of case until specified character is found. 
  * This function is useful when comparing tokens in a string that are separated

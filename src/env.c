@@ -65,7 +65,7 @@ static int corto_venvparseFlush(char* var, char** varptrptr, char** bptrptr, cha
     **varptrptr = '\0';
     val = corto_getenv(var);
     if (!val) {
-        corto_seterr("environment variable '%s' doesn't exist", var);
+        corto_seterr("environment variable '%s' is not set", var);
         goto error;
     }
     len = strlen(val);

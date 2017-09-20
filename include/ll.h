@@ -58,6 +58,9 @@ CORTO_EXPORT void corto_ll_replace(corto_ll list, void* o, void* by);
 /* Take first */
 CORTO_EXPORT void* corto_ll_takeFirst(corto_ll);
 
+/* Take last */
+CORTO_EXPORT void* corto_ll_takeLast(corto_ll);
+
 /* Random access read */
 CORTO_EXPORT void* corto_ll_get(corto_ll list, int index);
 

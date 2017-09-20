@@ -26,3 +26,45 @@ char* corto_hostname(void) {
     gethostname(buff, sizeof(buff));
     return corto_setThreadString(buff);
 }
+
+bool corto_os_match(
+    char *os)
+{
+    if (!stricmp(os, CORTO_OS_STRING) ||
+
+#ifdef __i386__
+        !stricmp(os, CORTO_OS_STRING "-x86") ||
+        !stricmp(os, CORTO_OS_STRING "-i386") ||
+        !stricmp(os, CORTO_OS_STRING "-i686") ||
+        !stricmp(os, "x86-" CORTO_OS_STRING) ||
+        !stricmp(os, "i386-" CORTO_OS_STRING) ||
+        !stricmp(os, "i686-" CORTO_OS_STRING))
+
+#elif __x86_64__
+        !stricmp(os, CORTO_OS_STRING "-amd64") ||
+        !stricmp(os, CORTO_OS_STRING "-x64") ||
+        !stricmp(os, CORTO_OS_STRING "-x86_64") ||
+        !stricmp(os, CORTO_OS_STRING "-x86-64") ||        
+        !stricmp(os, "amd64-" CORTO_OS_STRING) ||
+        !stricmp(os, "x64-" CORTO_OS_STRING) ||
+        !stricmp(os, "x86-64-" CORTO_OS_STRING) ||
+        !stricmp(os, "x86_64-" CORTO_OS_STRING))
+
+#elif defined(__arm__) && defined(CORTO_CPU_32BIT)
+        !stricmp(os, CORTO_OS_STRING "-arm") ||
+        !stricmp(os, CORTO_OS_STRING "-arm7l") ||
+        !stricmp(os, "arm-" CORTO_OS_STRING) ||
+        !stricmp(os, "arm7l-" CORTO_OS_STRING))
+
+#elif defined(__arm__) && defined(CORTO_CPU_64BIT)
+        !stricmp(os, CORTO_OS_STRING "-arm8") ||
+        !stricmp(os, CORTO_OS_STRING "-arm64") ||
+        !stricmp(os, "arm64-" CORTO_OS_STRING) ||
+        !stricmp(os, "arm8-" CORTO_OS_STRING))
+#endif
+    {
+        return true;
+    } else {
+        return false;
+    }
+}

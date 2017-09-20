@@ -237,6 +237,27 @@ void* corto_ll_takeFirst(corto_ll list) {
     return data;
 }
 
+/* Take last */
+void* corto_ll_takeLast(corto_ll list) {
+    void* data;
+    corto_ll_node node;
+
+    node = list->last;
+    data = 0;
+
+    if (node) {
+        data = node->data;
+        list->last = node->prev;
+        free(node);
+        if (!list->last) {
+            list->first = 0;
+        }
+        list->size --;
+    }
+
+    return data;
+}
+
 /* Remove object */
 void* corto_ll_remove(corto_ll list, void* o) {
     corto_ll_node node, prev;
