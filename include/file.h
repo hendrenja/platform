@@ -31,6 +31,18 @@
 extern "C" {
 #endif
 
+/** Open a file.
+ * This function opens a file. If the filepath does not yet exist, it will be
+ * automatically created as well.
+ *
+ * @param file The file to load.
+ * @return A string that contains the file contents. Must be deallocated with free.
+ */
+CORTO_EXPORT 
+FILE* corto_file_open(
+    const char* file,
+    const char* mode);
+
 /** Load contents of text file in memory.
  * 
  * @param file The file to load.
@@ -39,6 +51,17 @@ extern "C" {
 CORTO_EXPORT 
 char* corto_file_load(
     const char* file);
+
+/** Open file, walk through lines in file using an iterator.
+ * 
+ * @param file The file to load.
+ * @param iter_out out parameter for the iterator.
+ * @return 0 if success, non-zero if failed.
+ */
+CORTO_EXPORT
+int16_t corto_file_iter(
+    char *filename,
+    corto_iter *iter_out);
 
 /** Test if a file exists.
  * 

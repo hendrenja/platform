@@ -414,6 +414,19 @@ error:
     return -1;
 }
 
+bool corto_dir_isEmpty(
+    const char *name)
+{
+    corto_iter it;
+    if (corto_dir_iter(name, &it)) {
+        return true; /* If dir can't be opened, it might as well be empty */
+    }
+
+    bool isEmpty = !corto_iter_hasNext(&it);
+    corto_iter_release(&it); /* clean up resources */
+    return isEmpty;
+}
+
 corto_dirstack corto_dirstack_push(
     corto_dirstack stack,
     const char *dir)

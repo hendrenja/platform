@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2010-2017 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,8 +22,44 @@
 
 #include <include/base.h>
 
-/* Load all contents from file, close file afterwards, return contents */
-char* corto_file_load(const char* filename) {
+static 
+void printError(
+    int e, 
+    const char *ctx) 
+{
+    corto_seterr("%s '%s'", strerror(e), ctx);
+}
+
+FILE* corto_file_open(
+    const char* filename,
+    const char* mode)
+{
+    FILE *result = fopen(filename, mode);
+    if (!result && (strchr(mode, 'a') || strchr(mode, 'w'))) {
+        if (errno == ENOENT) {
+            char *dir = corto_path_dirname(filename);
+            if (corto_mkdir(dir)) {
+                free(dir);
+                goto error;
+            }
+            free(dir);
+
+            /* Retry */
+            if (!(result = corto_file_open(filename, mode))) {
+                printError(errno, filename);
+                goto error;
+            }
+        }
+    }
+
+    return result;
+error:
+    return NULL;
+}
+
+char* corto_file_load(
+    const char* filename) 
+{
     FILE* file;
     char* content;
     int size;
@@ -58,7 +95,10 @@ error:
     return NULL;
 }
 
-bool corto_file_test(const char* filefmt, ...) {
+bool corto_file_test(
+    const char* filefmt, 
+    ...) 
+{
     FILE* exists = NULL;
     va_list arglist;
 
@@ -82,7 +122,9 @@ bool corto_file_test(const char* filefmt, ...) {
 }
 
 /* Get file size */
-unsigned int corto_file_size(FILE* file) {
+unsigned int corto_file_size(
+    FILE* file) 
+{
     unsigned int size;
 
     /* Determine file size */
@@ -94,7 +136,11 @@ unsigned int corto_file_size(FILE* file) {
 }
 
 /* Read line from file */
-char* corto_file_readln(FILE* file, char* buf, unsigned int length) {
+char* corto_file_readln(
+    FILE* file, 
+    char* buf, 
+    unsigned int length) 
+{
     int c;
     char* ptr;
 
@@ -124,8 +170,67 @@ char* corto_file_readln(FILE* file, char* buf, unsigned int length) {
     return (c == EOF) ? 0 : buf;
 }
 
+static
+bool corto_file_hasNext(
+    corto_iter *it)
+{
+    return !feof(it->ctx);
+}
+
+static
+void* corto_file_next(
+    corto_iter *it)
+{
+    corto_buffer buf = CORTO_BUFFER_INIT;
+
+    while (!feof(it->ctx)) {
+        char c = fgetc(it->ctx);
+        if (c == '\n' || c == EOF) {
+            break;
+        }
+        
+        corto_buffer_appendstrn(&buf, &c, 1);
+    }
+
+    if (it->data) free(it->data);
+    it->data = corto_buffer_str(&buf);
+    return it->data;
+}
+
+static
+void corto_file_release(
+    corto_iter *it)
+{
+    if (it->data) free(it->data);
+    if (it->ctx) fclose(it->ctx);
+}
+
+int16_t corto_file_iter(
+    char *filename,
+    corto_iter *iter_out)
+{
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        printError(errno, filename);
+        goto error;
+    }
+
+    iter_out->ctx = f;
+    iter_out->data = NULL;
+    iter_out->hasNext = corto_file_hasNext;
+    iter_out->next = corto_file_next;
+    iter_out->release = corto_file_release;
+
+    return 0;
+error:
+    return -1;
+}
+
 /* Get file extension */
-char* corto_file_extension(char* file, char* buffer) {
+char* corto_file_extension(
+    char* file, 
+    char* buffer) 
+{
     char *ptr, *bptr;
     char ch;
 

@@ -76,6 +76,15 @@ int16_t corto_dir_iter(
     const char *name,
     corto_iter *iter_out);
 
+/** Returns whether directory is empty or not.
+ * 
+ * @param name The name of the directory to check. 
+ * @return true if empty, false if not.
+ */
+CORTO_EXPORT
+bool corto_dir_isEmpty(
+    const char *name);
+
 /** Type holding a stack for usage with corto_dir_push / corto_dir_pop */
 typedef void* corto_dirstack;
 
