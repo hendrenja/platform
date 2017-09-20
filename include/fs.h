@@ -158,7 +158,7 @@ int corto_chdir(
  * @return zero if success, non-zero if failed 
  */
 CORTO_EXPORT 
-int corto_cp(
+int16_t corto_cp(
     const char *source, 
     const char *destination);
 

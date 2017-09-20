@@ -28,7 +28,8 @@
  * The name for the error code will be appended.
  */
 static void printError(int e, const char *ctx) {
-    corto_seterr("%s '%s'", strerror(e), ctx);
+    if (e) corto_seterr("%s: %s", ctx, strerror(e));
+    else  corto_seterr((char*)ctx);
 }
 
 int corto_touch(const char *file) {
@@ -125,81 +126,61 @@ error_name:
     return -1;
 }
 
-int corto_cp(const char *sourcePath, const char *destinationPath) {
+static
+int corto_cp_file(
+    const char *src, 
+    const char *dst)
+{
     int _errno = 0;
     char msg[PATH_MAX];
-    FILE *destinationFile;
-    FILE *sourceFile;
+    FILE *destinationFile = NULL;
+    FILE *sourceFile = NULL;
+    char *fullDst = (char*)dst;
 
-    if (!(sourceFile = fopen(sourcePath, "rb"))) {
-        _errno = errno;
-        sprintf(msg, "cannot open sourcefile '%s'", sourcePath);
+    /* If destination is a directory, copy into directory */
+    if (corto_file_test(dst) && corto_isdir(dst) && !corto_isdir(src)) {
+        fullDst = corto_asprintf("%s/%s", dst, src);
+    }
+
+    printf("cp_file: src = '%s', dst = '%s'\n", src, fullDst);
+
+    if (!(sourceFile = fopen(src, "rb"))) {
+        corto_seterr("cannot open '%s': %s", src, strerror(errno));
         goto error;
     }
 
-    if (!(destinationFile = fopen(destinationPath, "wb"))) {
-        /* If destination is a directory, append filename to directory and try
-         * again */
-        if (errno == EISDIR) {
-            corto_id dest;
-            const char *fileName = strrchr(sourcePath, '/');
-            if (!fileName) {
-                fileName = sourcePath;
-            }
-            sprintf(dest, "%s/%s", destinationPath, fileName);
-            if (!(destinationFile = fopen(dest, "wb"))) {
-                _errno = errno;
-                sprintf(msg, "cannot open destinationfile '%s'", dest);
-                fclose(sourceFile);
-                goto error;
-            }
-        } else {
-            _errno = errno;
-            sprintf(msg, "cannot open destinationfile '%s'", destinationPath);
-            fclose(sourceFile);
-            goto error;
-        }
+    if (!(destinationFile = fopen(fullDst, "wb"))) {
+        corto_seterr("cannot open '%s': %s", fullDst, strerror(errno));
+        goto error_CloseFiles;
     }
 
-    /* "no real standard portability"
-     * http://www.cplusplus.com/reference/cstdio/fseek/ */
     if (fseek(sourceFile, 0, SEEK_END)) {
-        _errno = errno;
-        sprintf(msg, "cannot traverse file '%s'", sourcePath);
+        corto_seterr("cannot seek '%s': %s", src, strerror(errno));
         goto error_CloseFiles;
     }
 
-    long fileSizeResult;
-    size_t fileSize;
-    fileSizeResult = ftell(sourceFile);
-    if (fileSizeResult == -1) {
-        sprintf(msg, "cannot obtain filesize from file %s", sourcePath);
+    size_t fileSize = ftell(sourceFile);
+    if (fileSize == -1) {
+        corto_seterr("cannot get size from '%s': %s", src, strerror(errno));
         goto error_CloseFiles;
     }
-
-    fileSize = fileSizeResult;
 
     rewind(sourceFile);
 
     char *buffer = corto_alloc(fileSize);
-    if (!buffer) {
-        _errno = 0;
-        sprintf(msg, "cannot allocate buffer for copying files");
-        goto error_CloseFiles;
-    }
 
-    if (fread(buffer, 1, fileSize, sourceFile) != fileSize) {
-        _errno = 0;
-        sprintf(msg, "cannot read the file %s", sourcePath);
+    size_t n;
+    if ((n = fread(buffer, 1, fileSize, sourceFile)) != fileSize) {
+        corto_seterr("cannot read '%s': %s", src, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
 
     if (fwrite(buffer, 1, fileSize, destinationFile) != fileSize) {
-        _errno = 0;
-        sprintf(msg, "cannot write to the file %s", destinationPath);
+        corto_seterr("cannot write to '%s': %s", fullDst, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
 
+    if (fullDst != dst) free(fullDst);
     corto_dealloc(buffer);
     fclose(sourceFile);
     fclose(destinationFile);
@@ -209,10 +190,94 @@ int corto_cp(const char *sourcePath, const char *destinationPath) {
 error_CloseFiles_FreeBuffer:
     free(buffer);
 error_CloseFiles:
-    fclose(sourceFile);
-    fclose(destinationFile);
+    if (sourceFile) fclose(sourceFile);
+    if (destinationFile) fclose(destinationFile);
 error:
-    printError(_errno, msg);
+    return -1;    
+}
+
+static
+int16_t corto_cp_dir(
+    const char *src, 
+    const char *dst)
+{
+    char *lasterr = NULL;
+
+    printf("cp_dir: src = '%s', dst = '%s'\n", src, dst);
+
+    if (corto_mkdir(dst)) {
+        goto error;
+    }
+
+    corto_dirstack stack = corto_dirstack_push(NULL, src);
+    if (!stack) {
+        goto error;
+    }
+
+    corto_iter it;
+
+    if (corto_dir_iter(".", &it)) {
+        goto error;
+    }
+
+    while (corto_iter_hasNext(&it)) {
+        char *file = corto_iter_next(&it);
+
+        printf(">> file '%s'\n", file);
+
+        if (corto_isdir(file)) {
+            /*if (corto_cp_dir(file, dst)) {
+                goto error;
+            }*/
+        } else {
+            if (corto_cp_file(file, dst)) {
+                goto error;
+            }
+        }
+    }
+
+    if (corto_dirstack_pop(stack)) {
+        goto error;
+    }
+
+    return 0;
+error:
+    if (corto_lasterr()) {
+        /* In case something goes wrong with the next statement, preserve error */
+        lasterr = strdup(corto_lasterr());
+    }
+    if (corto_dirstack_pop(stack)) {
+        if (lasterr) corto_seterr(lasterr);
+    }
+    if (lasterr) free(lasterr);
+    return -1;
+}
+
+int16_t corto_cp(
+    const char *src, 
+    const char *dst) 
+{
+    int16_t result;
+
+    corto_log_push("cp");
+
+    if (!corto_file_test(src)) {
+        corto_seterr("source '%s' does not exist", src);
+        goto error;
+    }
+
+    printf("src = '%s', fullDst = '%s'\n", src, dst);
+
+    if (corto_isdir(src)) {
+        result = corto_cp_dir(src, dst);
+    } else {
+        result = corto_cp_file(src, dst);
+    }
+
+    corto_log_pop();
+    return result;
+error:
+    corto_log_pop();
     return -1;
 }
 
@@ -293,9 +358,10 @@ int corto_rm(const char *name) {
     if (corto_isdir(name)) {
         return corto_rmtree(name);
     } else if (remove(name)) {
+
         /* Don't care if file didn't exist since the postcondition
          * is that file doesn't exist. */
-        if (errno != EEXIST) {
+        if (errno != ENOENT) {
             result = -1;
             corto_seterr(strerror(errno));
         }
