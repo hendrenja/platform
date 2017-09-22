@@ -75,6 +75,13 @@ int corto_mkdir(const char *fmt, ...) {
         goto error_name;
     }
 
+    /* Remove a file if it already exists and is not a directory */
+    if (corto_file_test(name) && !corto_isdir(name)) {
+        if (corto_rm(name)) {
+            goto error;
+        }
+    }
+
     if (mkdir(name, 0755)) {
         _errno = errno;
 
