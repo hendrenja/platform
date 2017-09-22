@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 typedef void*(*dlproc)(void);
 

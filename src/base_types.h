@@ -2,7 +2,7 @@
 #ifndef CORTO__BASE_TYPES_H_
 #define CORTO__BASE_TYPES_H_
 
-#include <include/base.h>
+#include <corto/base.h>
 
 typedef struct corto_ll_node_s {
     void* data;

@@ -22,8 +22,6 @@
 #ifndef CORTO_THREAD_POSIX_H_
 #define CORTO_THREAD_POSIX_H_
 
-#include "pthread.h"
-#include "signal.h"
 
 #ifdef __cplusplus
 extern "C" {

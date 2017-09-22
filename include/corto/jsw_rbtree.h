@@ -41,8 +41,6 @@
   a header comment, such as this one.
 */
 
-#include <include/base.h>
-
 #ifdef __cplusplus
 #include <cstddef>
 

@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 char* corto_hostname(void) {
     corto_id buff;

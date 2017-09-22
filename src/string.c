@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 int stricmp(const char *str1, const char *str2) {
     const char *ptr1, *ptr2;

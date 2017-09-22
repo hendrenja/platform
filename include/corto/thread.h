@@ -22,14 +22,12 @@
 #ifndef CORTO_THREAD_H
 #define CORTO_THREAD_H
 
-#include "include/posix_thread.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define CORTO_LOCK_BUSY (1)
-
 
 
 /* -- Thread management -- */

@@ -175,6 +175,32 @@ int corto_symlink(
     const char *oldname,
     const char *newname);
 
+/** Set permissions of a file.
+ * This function uses the UNIX convention to specify permissions. To specify
+ * permissions using the familiar octal notation, use:
+ *   corto_setperm("myfile.txt", strtol("777", 0, 8));
+ *
+ * @param name The filename
+ * @param perm Integer indicating the permissions to set.
+ * @return 0 if success, non-zero if failed.
+ */
+CORTO_EXPORT
+int16_t corto_setperm(
+    const char *name,
+    int perm);
+
+/** Get permissions of a file.
+ * This function uses the UNIX convention to specify permissions.
+ *
+ * @param name The filename
+ * @param perm_out Integer specifying the permissions of the file.
+ * @return 0 if success, non-zero if failed. 
+ */
+CORTO_EXPORT
+int16_t corto_getperm(
+    const char *name,
+    int *perm_out);
+
 /** Test if name is a directory.
  *
  * @param name Name to test.

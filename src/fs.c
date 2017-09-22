@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 /*
  * Receives:
@@ -136,13 +136,14 @@ int corto_cp_file(
     FILE *destinationFile = NULL;
     FILE *sourceFile = NULL;
     char *fullDst = (char*)dst;
+    int perm = 0;
 
     /* If destination is a directory, copy into directory */
     if (corto_file_test(dst) && corto_isdir(dst) && !corto_isdir(src)) {
-        fullDst = corto_asprintf("%s/%s", dst, src);
+        const char *base = strrchr(src, '/');
+        if (!base) base = src; else base = base + 1;
+        fullDst = corto_asprintf("%s/%s", dst, base);
     }
-
-    printf("cp_file: src = '%s', dst = '%s'\n", src, fullDst);
 
     if (!(sourceFile = fopen(src, "rb"))) {
         corto_seterr("cannot open '%s': %s", src, strerror(errno));
@@ -151,6 +152,11 @@ int corto_cp_file(
 
     if (!(destinationFile = fopen(fullDst, "wb"))) {
         corto_seterr("cannot open '%s': %s", fullDst, strerror(errno));
+        goto error_CloseFiles;
+    }
+
+    if (corto_getperm(src, &perm)) {
+        corto_seterr("cannot get permissions from '%s': %s", corto_lasterr());
         goto error_CloseFiles;
     }
 
@@ -180,6 +186,11 @@ int corto_cp_file(
         goto error_CloseFiles_FreeBuffer;
     }
 
+    if (corto_setperm(fullDst, perm)) {
+        corto_seterr("failed to set permissions of '%s': %s", corto_lasterr());
+        goto error;
+    }
+
     if (fullDst != dst) free(fullDst);
     corto_dealloc(buffer);
     fclose(sourceFile);
@@ -203,8 +214,6 @@ int16_t corto_cp_dir(
 {
     char *lasterr = NULL;
 
-    printf("cp_dir: src = '%s', dst = '%s'\n", src, dst);
-
     if (corto_mkdir(dst)) {
         goto error;
     }
@@ -222,8 +231,6 @@ int16_t corto_cp_dir(
 
     while (corto_iter_hasNext(&it)) {
         char *file = corto_iter_next(&it);
-
-        printf(">> file '%s'\n", file);
 
         if (corto_isdir(file)) {
             /*if (corto_cp_dir(file, dst)) {
@@ -265,8 +272,6 @@ int16_t corto_cp(
         corto_seterr("source '%s' does not exist", src);
         goto error;
     }
-
-    printf("src = '%s', fullDst = '%s'\n", src, dst);
 
     if (corto_isdir(src)) {
         result = corto_cp_dir(src, dst);
@@ -332,7 +337,33 @@ error:
     return -1;
 }
 
-/* Test if name is a directory */
+int16_t corto_setperm(
+    const char *name,
+    int perm)
+{
+    if (chmod(name, perm)) {
+        corto_seterr("chmod: %s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int16_t corto_getperm(
+    const char *name,
+    int *perm_out)
+{
+    struct stat st;
+
+    if (stat(name, &st) < 0) {
+        corto_seterr("getperm: %s", strerror(errno));
+        return -1;
+    }
+
+    *perm_out = st.st_mode;
+
+    return 0;
+}
+
 bool corto_isdir(const char *path) {
     struct stat buff;
     if (stat(path, &buff) != 0) {

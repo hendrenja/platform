@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 corto_thread corto_thread_new(corto_thread_cb f, void* arg) {
     pthread_t thread;

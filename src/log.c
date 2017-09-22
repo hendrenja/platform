@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <include/base.h>
+#include <corto/base.h>
 
 char *corto_log_appName = "";
 extern corto_mutex_s corto_log_lock;
@@ -625,7 +625,7 @@ void corto_seterrv(char *fmt, va_list args) {
     }
 
     if (categories && err) {
-        char *fullErr = corto_asprintf("%s %s", categories, err);
+        char *fullErr = corto_asprintf("%s%s", categories, err);
         free(categories);
         free(err);
         err = fullErr;

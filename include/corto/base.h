@@ -27,7 +27,7 @@
 #ifndef CORTO_BASE_H
 #define CORTO_BASE_H
 
-#include <include/_project.h>
+#include <corto/_project.h>
 
 /* Standard C library */
 #include <alloca.h>
@@ -59,6 +59,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <signal.h>
+#include <pthread.h>
 #include <ftw.h>
 #include <fcntl.h>
 
@@ -281,23 +282,24 @@ CORTO_EXPORT void base_init(char *appName);
 #endif
 
 /* Base includes */
-#include <include/os.h>
-#include <include/buffer.h>
-#include <include/iter.h>
-#include <include/ll.h>
-#include <include/string.h>
-#include <include/os.h>
-#include <include/time.h>
-#include <include/dl.h>
-#include <include/fs.h>
-#include <include/thread.h>
-#include <include/file.h>
-#include <include/env.h>
-#include <include/util.h>
-#include <include/log.h>
-#include <include/proc.h>
-#include <include/idmatch.h>
-#include <include/jsw_rbtree.h>
-#include <include/path.h>
+#include <corto/os.h>
+#include <corto/buffer.h>
+#include <corto/iter.h>
+#include <corto/ll.h>
+#include <corto/string.h>
+#include <corto/os.h>
+#include <corto/time.h>
+#include <corto/dl.h>
+#include <corto/fs.h>
+#include <corto/posix_thread.h>
+#include <corto/thread.h>
+#include <corto/file.h>
+#include <corto/env.h>
+#include <corto/util.h>
+#include <corto/log.h>
+#include <corto/proc.h>
+#include <corto/idmatch.h>
+#include <corto/jsw_rbtree.h>
+#include <corto/path.h>
 
 #endif /* CORTO_BASE_H */
