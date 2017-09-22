@@ -66,7 +66,7 @@ char* corto_cwd(void) {
 int corto_mkdir(const char *fmt, ...) {
     int _errno = 0;
     char msg[PATH_MAX];
-    
+
     va_list args;
     va_start(args, fmt);
     char *name = corto_venvparse(fmt, args);
@@ -74,6 +74,8 @@ int corto_mkdir(const char *fmt, ...) {
     if (!name) {
         goto error_name;
     }
+
+    corto_trace("mkdir '%s'", name);
 
     /* Remove a file if it already exists and is not a directory */
     if (corto_file_test(name) && !corto_isdir(name)) {
@@ -273,6 +275,8 @@ int16_t corto_cp(
 {
     int16_t result;
 
+    corto_trace("cp '%s' '%s'", src, dst);
+
     corto_log_push("cp");
 
     if (!corto_file_test(src)) {
@@ -293,6 +297,35 @@ error:
     return -1;
 }
 
+static
+bool corto_checklink(
+    const char *link,
+    const char *file)
+{
+    char buf[512];
+    char *ptr = buf;
+    int length = strlen(file);
+    if (length >= 512) {
+        ptr = malloc(length + 1);
+    }
+    int res;
+    if (((res = readlink(link, ptr, length)) < 0)) {
+        printf("not a link\n");
+        goto nomatch;
+    }
+    if (res != length) {
+        goto nomatch;
+    }
+    if (strncmp(file, ptr, length)) {
+        goto nomatch;
+    }
+    if (ptr != buf) free(ptr);
+    return true;
+nomatch:
+    if (ptr != buf) free(ptr);
+    return false;
+}
+
 int corto_symlink(
     const char *oldname,
     const char *newname) 
@@ -305,6 +338,8 @@ int corto_symlink(
         /* Safe- the variable will not be modified if it's equal to newname */
         fullname = (char*)oldname;
     }
+
+    corto_trace("symlink '%s' => '%s'", newname, fullname);    
 
     if (symlink(fullname, newname)) {
 
@@ -324,14 +359,19 @@ int corto_symlink(
             free(dir);
 
         } else if (errno == EEXIST) {
-            /* If a file with specified name already exists, remove existing file */
-            if (corto_rm(newname)) {
-                goto error;
-            }
+            char *link;
+            if (!corto_checklink(newname, fullname)) {
+                /* If a file with specified name already exists, remove existing file */
+                if (corto_rm(newname)) {
+                    goto error;
+                }
 
-            /* Retry */
-            if (corto_symlink(fullname, newname)) {
-                goto error;
+                /* Retry */
+                if (corto_symlink(fullname, newname)) {
+                    goto error;
+                }
+            } else {
+                /* Existing file is a link that points to the same location */
             }
         }
     }
@@ -348,6 +388,7 @@ int16_t corto_setperm(
     const char *name,
     int perm)
 {
+    corto_trace("setperm '%s' => %d", name, perm);
     if (chmod(name, perm)) {
         corto_seterr("chmod: %s", strerror(errno));
         return -1;
@@ -373,7 +414,7 @@ int16_t corto_getperm(
 
 bool corto_isdir(const char *path) {
     struct stat buff;
-    if (stat(path, &buff) != 0) {
+    if (stat(path, &buff) < 0) {
         return 0;
     }
     return S_ISDIR(buff.st_mode) ? true : false;
@@ -392,6 +433,8 @@ error:
 /* Remove a file. Returns 0 if OK, -1 if failed */
 int corto_rm(const char *name) {
     int result = 0;
+
+    corto_trace("rm '%s'", name);    
 
     if (corto_isdir(name)) {
         return corto_rmtree(name);
