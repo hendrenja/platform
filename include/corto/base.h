@@ -301,5 +301,6 @@ CORTO_EXPORT void base_init(char *appName);
 #include <corto/idmatch.h>
 #include <corto/jsw_rbtree.h>
 #include <corto/path.h>
+#include <corto/load.h>
 
 #endif /* CORTO_BASE_H */

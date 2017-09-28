@@ -275,7 +275,7 @@ int16_t corto_cp(
 {
     int16_t result;
 
-    corto_trace("cp '%s' '%s'", src, dst);
+    corto_trace("cp '%s' => '%s'", src, dst);
 
     corto_log_push("cp");
 

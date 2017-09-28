@@ -5,6 +5,7 @@ int8_t CORTO_BACKTRACE_ENABLED = 0;
 
 /* Lock to protect global administration related to logging framework */
 corto_mutex_s corto_log_lock;
+corto_mutex_s corto_load_lock;
 
 extern char *corto_log_appName;
 
@@ -15,6 +16,10 @@ void base_init(char *appName) {
 
     if (corto_mutex_new(&corto_log_lock)) {
         corto_critical("failed to create mutex for logging framework");
+    }
+
+    if (corto_mutex_new(&corto_log_lock)) {
+        corto_critical("failed to create mutex for package loader");
     }
 
     void corto_threadStringDealloc(void *data);
@@ -52,4 +57,11 @@ void base_init(char *appName) {
     }
 
     CORTO_APP_STATUS = 0;
+    
+    corto_load_init(
+        corto_getenv("CORTO_TARGET"),
+        corto_getenv("CORTO_HOME"),
+        "/usr/local",
+        corto_getenv("CORTO_VERSION"),
+        NULL);
 }
