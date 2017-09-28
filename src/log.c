@@ -36,6 +36,7 @@ CORTO_EXPORT void corto_printBacktrace(FILE* f, int nEntries, char** symbols);
 typedef struct corto_errThreadData {
     char* lastInfo;
     char* lastError;
+    char *lastCategory;
     char* backtrace;
     bool viewed;
     char *categories[CORTO_MAX_LOG_COMPONENTS + 1];
@@ -98,16 +99,22 @@ static char* corto_getLastInfo(void) {
     return data->lastInfo;
 }
 
-static void corto_setLastError(char* err) {
+static void corto_setLastError(char *category, char* err) {
     corto_errThreadData *data = corto_getThreadData();
     if (!data->viewed && data->lastError) {
         data->viewed = TRUE; /* Prevent recursion */
-        corto_warning("uncatched error (use corto_lasterr): %s%s%s",
-          data->lastError, data->backtrace ? "\n" : "", data->backtrace ? data->backtrace : "");
+        corto_error("%s%s%s%s%s (unhandled error)",
+          data->lastCategory ? data->lastCategory : "",
+          data->lastCategory ? ": " : "",
+          data->lastError, 
+          data->backtrace ? "\n" : "", 
+          data->backtrace ? data->backtrace : "");
     }
     if (data->lastError) corto_dealloc(data->lastError);
     if (data->backtrace) corto_dealloc(data->backtrace);
+    if (data->lastCategory) corto_dealloc(data->lastCategory);
     data->lastError = err ? corto_strdup(err) : NULL;
+    data->lastCategory = category ? corto_strdup(category) : NULL;
     if (corto_log_verbosityGet() == CORTO_DEBUG) {
         data->backtrace = corto_backtraceString();
     }
@@ -290,6 +297,7 @@ static char* corto_log_tokenize(char *msg) {
     char *ptr, ch, prev = '\0';
     bool isNum = FALSE;
     char isStr = '\0';
+    bool isVar = false;
 
     for (ptr = msg; (ch = *ptr); ptr++) {
 
@@ -304,9 +312,19 @@ static char* corto_log_tokenize(char *msg) {
             isStr = ch;
         }
 
-        if ((isdigit(ch) || (ch == '-' && isdigit(ptr[1]))) && !isNum && !isStr && !isalpha(prev) && !isdigit(prev) && (prev != '_') && (prev != '.')) {
+        if ((isdigit(ch) || (ch == '-' && isdigit(ptr[1]))) && !isNum && !isStr && !isVar && !isalpha(prev) && !isdigit(prev) && (prev != '_') && (prev != '.')) {
             corto_buffer_appendstr(&buff, CORTO_GREEN);
             isNum = TRUE;
+        }
+
+        if (isVar && !isalpha(ch) && !isdigit(ch) && ch != '_') {
+            corto_buffer_appendstr(&buff, CORTO_NORMAL);
+            isVar = FALSE;
+        }
+
+        if (!isStr && !isVar && ch == '$' && isalpha(ptr[1])) {
+            corto_buffer_appendstr(&buff, CORTO_MAGENTA);
+            isVar = TRUE;
         }
 
         corto_buffer_appendstrn(&buff, ptr, 1);
@@ -365,9 +383,10 @@ static void corto_logprint_friendlyTime(corto_buffer *buf, struct timespec t) {
 static int corto_logprint_categories(corto_buffer *buf, char *categories[]) {
     char *categoryStr = categories ? corto_log_categoryString(categories) : NULL;
     if (categoryStr) {
+        int l = categoryStr[0] != 0;
         corto_buffer_appendstr(buf, categoryStr);
         corto_dealloc(categoryStr);
-        return 1;
+        return l;
     } else {
         return 0;
     }
@@ -410,12 +429,12 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categories[]
     size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT;
     char *fmtptr, ch;
-    bool prevSeparatedBySpace = FALSE, separatedBySpace = FALSE;
+    bool prevSeparatedBySpace = TRUE, separatedBySpace = FALSE;
     struct timespec now;
     timespec_gettime(&now);
 
     for (fmtptr = corto_log_fmt_current; (ch = *fmtptr); fmtptr++) {
-        if (ch == '%') {
+        if (ch == '%' && fmtptr[1]) {
             int ret = 1;
             switch(fmtptr[1]) {
             case 'T': corto_logprint_friendlyTime(&buf, now); break;
@@ -427,6 +446,9 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categories[]
             case 'l': ret = corto_logprint_line(&buf, line); break;
             case 'm': ret = corto_logprint_msg(&buf, msg); break;
             case 'a': corto_buffer_append(&buf, "%s%s%s", CORTO_CYAN, corto_log_appName, CORTO_NORMAL); break;
+            case 'V': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { corto_logprint_kind(&buf, kind); } else { ret = 0; } break;
+            case 'F': if (kind >= CORTO_WARNING) { ret = corto_logprint_file(&buf, file); } else { ret = 0; } break;
+            case 'L': if (kind >= CORTO_WARNING) { ret = corto_logprint_line(&buf, line); } else { ret = 0; } break;
             default:
                 corto_buffer_appendstr(&buf, "%");
                 corto_buffer_appendstrn(&buf, &fmtptr[1], 1);
@@ -435,7 +457,7 @@ static void corto_logprint(FILE *f, corto_log_verbosity kind, char *categories[]
 
             if (fmtptr[2] == ' ') {
                 separatedBySpace = TRUE;
-            } else if ((fmtptr[2] != '%') && (fmtptr[3] == ' ')) {
+            } else if (fmtptr[2] && (fmtptr[2] != '%') && (fmtptr[3] == ' ')) {
                 separatedBySpace = TRUE;
             } else {
                 separatedBySpace = FALSE;
@@ -624,14 +646,7 @@ void corto_seterrv(char *fmt, va_list args) {
         err = corto_vasprintf(fmt, args);
     }
 
-    if (categories && err) {
-        char *fullErr = corto_asprintf("%s%s", categories, err);
-        free(categories);
-        free(err);
-        err = fullErr;
-    }
-
-    corto_setLastError(err);
+    corto_setLastError(categories, err);
 
     if (fmt && ((corto_log_verbosityGet() == CORTO_DEBUG) || CORTO_APP_STATUS)) {
         if (CORTO_APP_STATUS == 1) {
