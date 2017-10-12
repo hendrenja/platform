@@ -385,13 +385,17 @@ void corto_criticalv(
  * @param fmt printf-style format string.
  */
 CORTO_EXPORT 
-void corto_seterr(
+void _corto_seterr(
+    char const *file,
+    unsigned int line,
     char *fmt, 
     ...);
 
 /* As corto_seterr, but with va_list parameter. */
 CORTO_EXPORT 
 void corto_seterrv(
+    char const *file,
+    unsigned int line,
     char *fmt, 
     va_list args);
 
@@ -429,11 +433,12 @@ void corto_backtrace(
 
 /* -- Helper macro's -- */
 
-#define corto_critical(...) _corto_critical(__FILE__, __LINE__, __VA_ARGS__);
-#define corto_error(...) _corto_error(__FILE__, __LINE__, __VA_ARGS__);
-#define corto_warning(...) _corto_warning(__FILE__, __LINE__, __VA_ARGS__);
-#define corto_error_fl(f, l, ...) _corto_error(f, l, __VA_ARGS__);
-#define corto_warning_fl(f, l, ...) _corto_warning(f, l, __VA_ARGS__);
+#define corto_critical(...) _corto_critical(__FILE__, __LINE__, __VA_ARGS__)
+#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, __VA_ARGS__)
+#define corto_error(...) _corto_error(__FILE__, __LINE__, __VA_ARGS__)
+#define corto_warning(...) _corto_warning(__FILE__, __LINE__, __VA_ARGS__)
+#define corto_error_fl(f, l, ...) _corto_error(f, l, __VA_ARGS__)
+#define corto_warning_fl(f, l, ...) _corto_warning(f, l, __VA_ARGS__)
 #ifndef NDEBUG
 #define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, condition, "(" #condition ") " __VA_ARGS__);}
 #define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, __VA_ARGS__);}

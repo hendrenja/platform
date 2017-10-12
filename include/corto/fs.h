@@ -74,6 +74,7 @@ void corto_closedir(
 CORTO_EXPORT
 int16_t corto_dir_iter(
     const char *name,
+    const char *filter,
     corto_iter *iter_out);
 
 /** Returns whether directory is empty or not.
@@ -231,13 +232,21 @@ CORTO_EXPORT
 int corto_rm(
     const char *name);
 
-/** Recursively remove a directory 
+/** Recursively remove a directory .
  *
  * @param name Name of directory to remove.
  * @return 0 if success, non-zero if failed.
  */
 CORTO_EXPORT 
 int corto_rmtree(
+    const char *name);
+
+/** Get last modified date for file.
+ *
+ * @param name Name of the file.
+ */
+CORTO_EXPORT
+time_t corto_lastmodified(
     const char *name);
 
 #ifdef __cplusplus

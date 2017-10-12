@@ -157,9 +157,40 @@ error:
     return -1;
 }
 
+bool corto_idmatch_isOperator(
+    char ch)
+{
+    switch (ch) {
+    case '*':
+    case '?':
+    case '^':
+    case '&':
+    case '|':
+    case ',':
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool corto_idmatch_hasOperators(
+    const char *expr)
+{
+    const char *ptr;
+    char ch;
+    for (ptr = expr; (ch = *ptr); ptr++) {
+        if (ch == '/' && ptr[1] == '/') {
+            return true;
+        } else if (corto_idmatch_isOperator(ch)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int16_t corto_idmatchParseIntern(
     corto_idmatch_program data,
-    char *expr,
+    const char *expr,
     bool allowScopes,
     bool allowSeparators)
 {
@@ -177,31 +208,6 @@ int16_t corto_idmatchParseIntern(
         data->ops[op].start = NULL;
         start = ptr;
         switch(ch) {
-        case '.':
-            if (!allowScopes) {
-                corto_seterr("scope operators not allowed");
-                goto error;
-            }
-            if (ptr[1] == '.') {
-                if ((op < 4) ||
-                    ((data->ops[op - 2].token == CORTO_MATCHER_TOKEN_PARENT) &&
-                     (data->ops[op - 1].token == CORTO_MATCHER_TOKEN_SCOPE)))
-                {
-                    data->ops[op].token = CORTO_MATCHER_TOKEN_PARENT;
-                } else {
-                    op -= 4;
-                }
-                *ptr = '\0';
-                ptr++;
-            } else {
-                if ((op < 2) || (data->ops[op - 1].token != CORTO_MATCHER_TOKEN_SCOPE)) {
-                    data->ops[op].token = CORTO_MATCHER_TOKEN_THIS;
-                } else {
-                    op -= 2;
-                }
-                *ptr = '\0';
-            }
-            break;
         case '/':
             if (!allowScopes) {
                 corto_seterr("scope operators not allowed");
@@ -250,12 +256,37 @@ int16_t corto_idmatchParseIntern(
             data->ops[op].token = CORTO_MATCHER_TOKEN_SEPARATOR;
             *ptr = '\0';
             break;
+        case '.':
+            if (!allowScopes) {
+                corto_seterr("scope operators not allowed");
+                goto error;
+            }
+            if (ptr[1] == '.') {
+                if ((op < 4) ||
+                    ((data->ops[op - 2].token == CORTO_MATCHER_TOKEN_PARENT) &&
+                     (data->ops[op - 1].token == CORTO_MATCHER_TOKEN_SCOPE)))
+                {
+                    data->ops[op].token = CORTO_MATCHER_TOKEN_PARENT;
+                } else {
+                    op -= 4;
+                }
+                *ptr = '\0';
+                ptr++;
+            } else {
+                if ((op < 2) || (data->ops[op - 1].token != CORTO_MATCHER_TOKEN_SCOPE)) {
+                    data->ops[op].token = CORTO_MATCHER_TOKEN_THIS;
+                } else {
+                    op -= 2;
+                }
+                *ptr = '\0';
+            }
+            break;            
         default:
             data->ops[op].token = CORTO_MATCHER_TOKEN_IDENTIFIER;
             while((ch = *ptr++) &&
                   (isalnum(ch) || (ch == '_') || (ch == '*') || (ch == '?') ||
                     (ch == '(') || (ch == ')') || (ch == '{') || (ch == '}') ||
-                    (ch == ' ') || (ch == '$')))
+                    (ch == ' ') || (ch == '$') || (ch == '.')))
             {
                 if ((ch == '*') || (ch == '?')) {
                     data->ops[op].token = CORTO_MATCHER_TOKEN_FILTER;
@@ -303,7 +334,7 @@ error:
 }
 
 corto_idmatch_program corto_idmatch_compile(
-    char *expr,
+    const char *expr,
     bool allowScopes,
     bool allowSeparators)
 {
@@ -356,6 +387,38 @@ corto_idmatch_program corto_idmatch_compile(
     return result;
 error:
     return NULL;
+}
+
+int corto_idmatch_scope(
+    corto_idmatch_program program)
+{
+    int result = 0;
+
+    if (program->kind == 1) {
+        result = 0;
+    } else if (program->kind == 2) {
+        result = 0;
+    } else if (program->kind == 3) {
+        result = 1;
+    } else if (program->kind == 4) {
+        result = 2;
+    } else {
+        int i;
+        for (i = 0; i < program->size; i++) {
+            switch(program->ops[i].token) {
+            case CORTO_MATCHER_TOKEN_SCOPE:
+                if (result < 1) result = 1;
+                break;
+            case CORTO_MATCHER_TOKEN_TREE:
+                result = 2;
+                break;
+            default:
+                break;
+            }
+        }  
+    }
+
+    return result;
 }
 
 bool corto_idmatch_runExpr(corto_idmatchOp **op, char **elements[], corto_idmatchToken precedence) {

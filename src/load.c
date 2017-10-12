@@ -955,7 +955,7 @@ void* corto_load_sym(char *package, corto_dl *dl_out, char *symbol) {
     if (*dl_out) {
         result = corto_dl_sym(*dl_out, symbol);
         if (!result) {
-            char *err = corto_dl_error();
+            char *err = (char*)corto_dl_error();
             if (err) {
                 corto_seterr(err);
             } else {

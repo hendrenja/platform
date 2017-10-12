@@ -53,7 +53,7 @@ struct corto_idmatch_program_s {
 
 int16_t corto_idmatchParseIntern(
     corto_idmatch_program data,
-    char *expr,
+    const char *expr,
     bool allowScopes,
     bool allowSeparators);
 

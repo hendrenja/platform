@@ -56,7 +56,7 @@ bool corto_idmatch(
  */
 CORTO_EXPORT 
 corto_idmatch_program corto_idmatch_compile(
-    char *pattern, 
+    const char *pattern, 
     bool allowScopes, 
     bool allowSeparators);
 
@@ -71,6 +71,16 @@ CORTO_EXPORT
 bool corto_idmatch_run(
     corto_idmatch_program program, 
     char *id);
+
+/** Return if program matches single object, n objects or a tree of objects.
+ *
+ * @param program A compiled program, created by corto_idmatch_compile
+ * @return 0 if single object, 1 if multiple objects and 2 if tree is matched.
+ * @see corto_idmatch corto_idmatch_compile corto_idmatch_free
+ */
+CORTO_EXPORT
+int corto_idmatch_scope(
+    corto_idmatch_program program);
 
 /** Free a compiled program.
  * The corto_idmatch_run function evaluates an identifier against a compiled
@@ -98,5 +108,28 @@ CORTO_EXPORT
 char* corto_matchParent(
     char *parent, 
     char *expr);
+
+/** Utility function to test if character is an operator in idmatch expression.
+ * Operators are all special characters besides the normal characters that may
+ * appear in an object identifier, like ^, |, &.
+ *
+ * @param ch The character to test
+ * @return true if an operator, false if not.
+ */
+CORTO_EXPORT
+bool corto_idmatch_isOperator(
+    char ch);
+
+/** Utility function to test if idmatch expression has operators.
+ * Operators are all special characters besides the normal characters that may
+ * appear in an object identifier, like ^, |, &. A single / will not be treated
+ * as operator, but a double // (recursive match) will.
+ *
+ * @param expr The expression to test
+ * @return true if it contains operators, false if it does not.
+ */
+CORTO_EXPORT
+bool corto_idmatch_hasOperators(
+    const char *expr);
 
 #endif

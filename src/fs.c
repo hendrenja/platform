@@ -20,6 +20,7 @@
  */
 
 #include <corto/base.h>
+#include "idmatch.h"
 
 /*
  * Receives:
@@ -234,7 +235,7 @@ int16_t corto_cp_dir(
 
     corto_iter it;
 
-    if (corto_dir_iter(".", &it)) {
+    if (corto_dir_iter(".", NULL, &it)) {
         goto error;
     }
 
@@ -506,6 +507,11 @@ void corto_closedir(corto_ll dir) {
     corto_ll_free(dir);
 }
 
+struct corto_dir_filteredIter {
+    corto_idmatch_program program;
+    void *files;
+};
+
 static
 bool corto_dir_hasNext(
     corto_iter *it) 
@@ -530,30 +536,156 @@ void* corto_dir_next(
 }
 
 static
+bool corto_dir_hasNextFilter(
+    corto_iter *it) 
+{
+    struct corto_dir_filteredIter *ctx = it->ctx;
+    struct dirent *ep = NULL;
+
+    do {
+        ep = readdir(ctx->files);
+    } while (ep && (*ep->d_name == '.' || !corto_idmatch_run(ctx->program, ep->d_name)));
+
+    if (ep) {
+        printf ("return -> %s\n", ep->d_name);
+        it->data = ep->d_name;
+    }
+
+    return ep ? true : false;
+}
+
+static
 void corto_dir_release(
     corto_iter *it) 
 {
     closedir(it->ctx);
 }
 
-int16_t corto_dir_iter(
-    const char *name, 
-    corto_iter *it_out)
+static
+void corto_dir_releaseFilter(
+    corto_iter *it) 
 {
-    corto_iter result = {
-        .ctx = opendir(name),
-        .data = NULL,
-        .hasNext = corto_dir_hasNext,
-        .next = corto_dir_next,
-        .release = corto_dir_release
-    };
+    struct corto_dir_filteredIter *ctx = it->ctx;
+    closedir(ctx->files);
+    corto_idmatch_free(ctx->program);
+    free(ctx);
+}
 
-    if (!result.ctx) {
-        printError(errno, name);
+static
+void corto_dir_releaseRecursiveFilter(
+    corto_iter *it)
+{
+    /* Free all elements */
+    corto_iter _it = corto_ll_iter(it->data);
+    while (corto_iter_hasNext(&_it)) {
+        free(corto_iter_next(&_it));
+    }
+
+    /* Free list iterator context */
+    corto_ll_iterRelease(it);
+}
+
+static
+int16_t corto_dir_collectRecursive(
+    const char *name, 
+    corto_dirstack stack, 
+    corto_idmatch_program filter, 
+    corto_ll files) 
+{
+    corto_iter it;
+
+    /* Move to current directory */
+    if (!(stack = corto_dirstack_push(stack, name))) {
+        goto stack_error;
+    }
+
+    /* Obtain iterator to current directory */
+    if (corto_dir_iter(".", NULL, &it)) {
         goto error;
     }
 
-    *it_out = result;
+    while (corto_iter_hasNext(&it)) {
+        char *file = corto_iter_next(&it);
+
+        /* Add file to results if it matches filter */
+        char *path = corto_asprintf("%s/%s", corto_dirstack_wd(stack), file);
+        corto_path_clean(path, path);
+        if (corto_idmatch_run(filter, path)) {
+            corto_ll_append(files, path);
+        }
+
+        /* If directory, crawl */
+        if (corto_isdir(file)) {
+            if (corto_dir_collectRecursive(file, stack, filter, files)) {
+                goto error;
+            }
+        }
+    }
+
+    corto_dirstack_pop(stack);
+
+    return 0;
+error:
+    corto_assert(corto_dirstack_pop(stack) == 0, "previous directory vanished");
+stack_error:
+    return -1;
+}
+
+
+int16_t corto_dir_iter(
+    const char *name,
+    const char *filter,
+    corto_iter *it_out)
+{
+    if (!filter) {
+        corto_iter result = {
+            .ctx = opendir(name),
+            .data = NULL,
+            .hasNext = corto_dir_hasNext,
+            .next = corto_dir_next,
+            .release = corto_dir_release
+        };
+
+        if (!result.ctx) {
+            printError(errno, name);
+            goto error;
+        }
+
+        *it_out = result;
+    } else {
+        corto_idmatch_program program = corto_idmatch_compile(filter, TRUE, TRUE);
+        corto_iter result = CORTO_ITER_EMPTY;
+
+        if (corto_idmatch_scope(program) == 2) {
+
+            corto_ll files = corto_ll_new();
+            if (corto_dir_collectRecursive(name, NULL, program, files)) {
+                goto error;
+            }
+
+            result = corto_ll_iterAlloc(files);
+            result.data = files;
+            result.release = corto_dir_releaseRecursiveFilter;
+        } else {
+            struct corto_dir_filteredIter *ctx = corto_alloc(sizeof(struct corto_dir_filteredIter));
+            ctx->files = opendir(name);
+            if (!ctx->files) {
+                free(ctx);
+                printError(errno, name);
+                goto error;
+            }
+            ctx->program = program;
+            result = (corto_iter){
+                .ctx = ctx,
+                .data = NULL,
+                .hasNext = corto_dir_hasNextFilter,
+                .next = corto_dir_next,
+                .release = corto_dir_releaseFilter
+            };
+        }
+
+        *it_out = result;
+    }
 
     return 0;
 error:
@@ -565,7 +697,7 @@ bool corto_dir_isEmpty(
     const char *name)
 {
     corto_iter it;
-    if (corto_dir_iter(name, &it)) {
+    if (corto_dir_iter(name, NULL, &it)) {
         return true; /* If dir can't be opened, it might as well be empty */
     }
 
@@ -617,10 +749,24 @@ const char* corto_dirstack_wd(
     }
 
     char *first = corto_ll_get(stack, 0);
-    char *last = corto_ll_last(stack);
-    char *result = last - strlen(first);
+    char *last = corto_cwd();
+    char *result = last + strlen(first);
     if (result[0] == '/') result ++;
 
     return result;
+}
+
+time_t corto_lastmodified(
+    const char *name)
+{
+    struct stat attr;
+
+    if (stat(name, &attr) < 0) {
+        corto_seterr("failed to stat '%s' (%s)", name, strerror(errno));
+    }
+
+    return attr.st_mtime;
+error:
+    return -1;
 }
 
