@@ -160,7 +160,7 @@ extern "C" {
 #define CORTO_MAX_BENCHMARK (64)
 
 /* Maximum number of components in logmsg, like: "comp1: comp2: comp3: msg" */
-#define CORTO_MAX_LOG_COMPONENTS (16)
+#define CORTO_MAX_LOG_CATEGORIES (16)
 
 /* #define CORTO_WALK_TRACING */
 #define CORTO_IC_TRACING
@@ -275,7 +275,12 @@ struct jsw_rbtrav {
 CORTO_EXPORT extern int8_t CORTO_APP_STATUS;
 CORTO_EXPORT extern int8_t CORTO_BACKTRACE_ENABLED;
 
-CORTO_EXPORT void base_init(char *appName);
+CORTO_EXPORT 
+void base_init(
+  char *appName);
+
+CORTO_EXPORT 
+void base_deinit(void);
 
 #ifdef __cplusplus
 }

@@ -164,6 +164,16 @@ void* corto_load_sym(
     corto_dl *dl_out, 
     char *symbol);
 
+/** Same as corto_load_sym, but for procedures.
+ * 
+ * @see corto_load_sym
+ */
+CORTO_EXPORT 
+void (*corto_load_proc(
+    char *package, 
+    corto_dl *dl_out, 
+    char *symbol))(void);
+
 /** Register a load action.
  * The `corto_load_register` function registers a load action that needs to be
  * invoked when loading a resource of a specified extension.

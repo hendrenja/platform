@@ -28,6 +28,18 @@ extern "C" {
 
 typedef struct corto_ll_node_s* corto_ll_node;
 
+typedef struct corto_ll_node_s {
+    void* data;
+    corto_ll_node next;
+    corto_ll_node prev;
+} corto_ll_node_s;
+
+typedef struct corto_ll_s {
+    corto_ll_node first;
+    corto_ll_node last;
+    unsigned int size;
+} corto_ll_s;
+
 typedef struct corto_ll_iter_s {
     corto_ll list;
     corto_ll_node cur;

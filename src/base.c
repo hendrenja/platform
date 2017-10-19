@@ -1,4 +1,4 @@
-#include <corto/base.h>
+#include "base.h"
 
 int8_t CORTO_APP_STATUS = 3;
 int8_t CORTO_BACKTRACE_ENABLED = 0;
@@ -26,6 +26,11 @@ void base_init(char *appName) {
 
     if (corto_tls_new(&CORTO_KEY_THREAD_STRING, corto_threadStringDealloc)) {
         corto_critical("failed to obtain tls key for thread admin");
+    }
+
+    if (corto_log_init()) {
+        corto_critical("failed to initialize logging framework: %s", 
+            corto_lasterr());
     }
 
     char *verbosity = corto_getenv("CORTO_VERBOSITY");
@@ -64,4 +69,8 @@ void base_init(char *appName) {
         "/usr/local",
         corto_getenv("CORTO_VERSION"),
         NULL);
+}
+
+void base_deinit(void) {
+    corto_tls_free();
 }

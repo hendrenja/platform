@@ -105,9 +105,10 @@ corto_log_verbosity corto_log_verbosityGet(void);
  * -m Formatted message
  * -t numerical representation of time (sec, nanosec)
  * -T user-friendly representation of time (1985-4-11 20:00:00)
- * -f Filename
- * -l Line number
- * 
+ * -f filename (use F for filename only in error messages)
+ * -l line number (use L for linenumber only in error messages)
+ * -r function (use R for function only in error messages) 
+ *
  * The logging format is the same for all threads. This function will also set
  * the CORTO_LOGFMT environment variable.
  *
@@ -127,14 +128,16 @@ void corto_log_fmt(
  * @return Zero if success, non-zero if failed (max number of categories pushed).
  */
 CORTO_EXPORT 
-int corto_log_push(
+int _corto_log_push(
+    char const *file,
+    unsigned int line,
+    char const *function,
     char *category);
 
 /** Pop a category from the category stack.
  */
 CORTO_EXPORT 
 void corto_log_pop(void);
-
 
 
 /* -- Registering handlers for logging -- */
@@ -194,7 +197,8 @@ bool corto_log_handlersRegistered(void);
 CORTO_EXPORT 
 void _corto_debug(
     char const *file, 
-    unsigned int line, 
+    unsigned int line,
+    char const *function,
     char* fmt, 
     ...);
 
@@ -209,6 +213,7 @@ CORTO_EXPORT
 void _corto_trace(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     ...);
 
@@ -223,6 +228,7 @@ CORTO_EXPORT
 void _corto_info(
     char const *file, 
     unsigned int line, 
+    char const *function,    
     char* fmt, 
     ...);
 
@@ -237,6 +243,7 @@ CORTO_EXPORT
 void _corto_ok(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     ...);
 
@@ -251,6 +258,7 @@ CORTO_EXPORT
 void _corto_warning(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     ...);
 
@@ -265,6 +273,7 @@ CORTO_EXPORT
 void _corto_error(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     ...);
 
@@ -285,6 +294,7 @@ CORTO_EXPORT
 void _corto_assert(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     unsigned int condition, 
     char* fmt, 
     ...);
@@ -303,6 +313,7 @@ CORTO_EXPORT
 void _corto_critical(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     ...);
 
@@ -311,6 +322,7 @@ CORTO_EXPORT
 void corto_debugv(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -319,6 +331,7 @@ CORTO_EXPORT
 void corto_tracev(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -327,6 +340,7 @@ CORTO_EXPORT
 void corto_infov(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -335,6 +349,7 @@ CORTO_EXPORT
 void corto_okv(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -342,7 +357,8 @@ void corto_okv(
 CORTO_EXPORT 
 void corto_warningv(
     char const *file, 
-    unsigned int line, 
+    unsigned int line,
+    char const *function,  
     char* fmt, 
     va_list args);
 
@@ -351,6 +367,7 @@ CORTO_EXPORT
 void corto_errorv(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -359,6 +376,7 @@ CORTO_EXPORT
 void _corto_assertv(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     unsigned int condition, 
     char* fmt, 
     va_list args);
@@ -368,6 +386,7 @@ CORTO_EXPORT
 void corto_criticalv(
     char const *file, 
     unsigned int line, 
+    char const *function, 
     char* fmt, 
     va_list args);
 
@@ -388,6 +407,7 @@ CORTO_EXPORT
 void _corto_seterr(
     char const *file,
     unsigned int line,
+    char const *function,
     char *fmt, 
     ...);
 
@@ -396,6 +416,7 @@ CORTO_EXPORT
 void corto_seterrv(
     char const *file,
     unsigned int line,
+    char const *function,
     char *fmt, 
     va_list args);
 
@@ -405,6 +426,10 @@ char* corto_lasterr(void);
 
 /** Returns non-zero value if last error has been viewed. */
 CORTO_EXPORT int corto_lasterrViewed(void);
+
+/** Returns if last error has been set (does not affect viewed flag) */
+CORTO_EXPORT 
+bool corto_lasterr_isSet(void);
 
 /** Propagate information to calling function.
  * This function is useful when a function wants to propagate a message that
@@ -433,18 +458,19 @@ void corto_backtrace(
 
 /* -- Helper macro's -- */
 
-#define corto_critical(...) _corto_critical(__FILE__, __LINE__, __VA_ARGS__)
-#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, __VA_ARGS__)
-#define corto_error(...) _corto_error(__FILE__, __LINE__, __VA_ARGS__)
-#define corto_warning(...) _corto_warning(__FILE__, __LINE__, __VA_ARGS__)
+#define corto_critical(...) _corto_critical(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+#define corto_error(...) _corto_error(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+#define corto_warning(...) _corto_warning(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+#define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, __PRETTY_FUNCTION__, category);
 #define corto_error_fl(f, l, ...) _corto_error(f, l, __VA_ARGS__)
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, __VA_ARGS__)
 #ifndef NDEBUG
-#define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, condition, "(" #condition ") " __VA_ARGS__);}
-#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, __VA_ARGS__);}
-#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, __VA_ARGS__);}
-#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, __VA_ARGS__);}
-#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, __VA_ARGS__);}
+#define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, __PRETTY_FUNCTION__, condition, "(" #condition ") " __VA_ARGS__);}
+#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
+#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
+#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
+#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)

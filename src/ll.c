@@ -19,8 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
-#include "base_types.h"
+#include "base.h"
 
 #define get(list, index) corto_ll_get(list, index)
 #define walk(list, cb, ctx) corto_ll_walk(list, cb, ctx)

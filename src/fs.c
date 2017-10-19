@@ -547,7 +547,6 @@ bool corto_dir_hasNextFilter(
     } while (ep && (*ep->d_name == '.' || !corto_idmatch_run(ctx->program, ep->d_name)));
 
     if (ep) {
-        printf ("return -> %s\n", ep->d_name);
         it->data = ep->d_name;
     }
 
@@ -748,7 +747,7 @@ const char* corto_dirstack_wd(
         return ".";
     }
 
-    char *first = corto_ll_get(stack, 0);
+    char *first = corto_ll_get(stack, 1);
     char *last = corto_cwd();
     char *result = last + strlen(first);
     if (result[0] == '/') result ++;
@@ -763,6 +762,7 @@ time_t corto_lastmodified(
 
     if (stat(name, &attr) < 0) {
         corto_seterr("failed to stat '%s' (%s)", name, strerror(errno));
+        goto error;
     }
 
     return attr.st_mtime;

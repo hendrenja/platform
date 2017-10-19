@@ -973,6 +973,9 @@ void* corto_load_sym(char *package, corto_dl *dl_out, char *symbol) {
     return result;
 }
 
+void(*corto_load_proc(char *package, corto_dl *dl_out, char *symbol))(void) {
+    return (void(*)(void))(uintptr_t)corto_load_sym(package, dl_out, symbol);
+}
 
 corto_ll corto_loadGetDependencies(char* file) {
     corto_ll result = NULL;
