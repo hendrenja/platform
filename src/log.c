@@ -21,17 +21,29 @@
 
 #include <corto/base.h>
 
+/* This global variable is set at startup and a public symbol */
 char *corto_log_appName = "";
+
+/* Variables used for synchronization & TLS */
 extern corto_mutex_s corto_log_lock;
 static corto_tls CORTO_KEY_LOG = 0;
+
+/* List of log handlers (protected by lock) */
+static corto_ll corto_log_handlers;
+
+/* These global variables are shared across threads and are *not* protected by
+ * a mutex. Libraries should not invoke functions that touch these, and an
+ * application should set them during startup. */
 static corto_log_verbosity CORTO_LOG_LEVEL = CORTO_INFO;
 static char *corto_log_fmt_application;
 static char *corto_log_fmt_current = CORTO_LOGFMT_DEFAULT;
+static bool corto_log_shouldEmbedCategories = true;
+
+/* Maximum stacktrace */
+#define BACKTRACE_DEPTH 60
 
 CORTO_EXPORT char* corto_backtraceString(void);
 CORTO_EXPORT void corto_printBacktrace(FILE* f, int nEntries, char** symbols);
-
-#define DEPTH 60
 
 typedef struct corto_log_frame {
     char *category;
@@ -39,6 +51,7 @@ typedef struct corto_log_frame {
     char const *function;
     unsigned int line;
     char *error;
+    int count;
 } corto_log_frame;
 
 typedef struct corto_log_tlsData {
@@ -72,8 +85,6 @@ static corto_log_tlsData* corto_getThreadData(void){
     }
     return result;
 }
-
-static corto_ll corto_log_handlers;
 
 corto_log_handler corto_log_handlerRegister(
     corto_log_verbosity min_level, 
@@ -181,12 +192,12 @@ void corto_printBacktrace(FILE* f, int nEntries, char** symbols) {
 
 void corto_backtrace(FILE* f) {
     int nEntries;
-    void* buff[DEPTH];
+    void* buff[BACKTRACE_DEPTH];
     char** symbols;
 
-    nEntries = backtrace(buff, DEPTH);
+    nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
-        symbols = backtrace_symbols(buff, DEPTH);
+        symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
 
         corto_printBacktrace(f, nEntries, symbols);
 
@@ -198,16 +209,16 @@ void corto_backtrace(FILE* f) {
 
 char* corto_backtraceString(void) {
     int nEntries;
-    void* buff[DEPTH];
+    void* buff[BACKTRACE_DEPTH];
     char** symbols;
     char* result;
 
     result = malloc(10000);
     *result = '\0';
 
-    nEntries = backtrace(buff, DEPTH);
+    nEntries = backtrace(buff, BACKTRACE_DEPTH);
     if (nEntries) {
-        symbols = backtrace_symbols(buff, DEPTH);
+        symbols = backtrace_symbols(buff, BACKTRACE_DEPTH);
 
         int i;
         for(i=1; i<nEntries; i++) { /* Skip this function */
@@ -221,6 +232,28 @@ char* corto_backtraceString(void) {
     }
 
     return result;
+}
+
+static 
+char* corto_log_categoryIndent(
+    char *categories[],
+    int offset)
+{
+    int i = 0;
+    corto_buffer buff = CORTO_BUFFER_INIT;
+
+    corto_buffer_appendstr(&buff, CORTO_GREY);
+
+    while (categories[i]) {
+        i ++;
+        if ((i + offset) > 0) {
+            corto_buffer_appendstr(&buff, "|  ");
+        }
+    }
+
+    corto_buffer_appendstr(&buff, CORTO_NORMAL);
+
+    return corto_buffer_str(&buff);
 }
 
 static 
@@ -455,6 +488,8 @@ void corto_logprint(
     size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT, *cur;
     char *fmtptr, ch;
+    corto_log_tlsData *data = corto_getThreadData();
+
     bool 
         prevSeparatedBySpace = TRUE, 
         separatedBySpace = FALSE, 
@@ -478,8 +513,19 @@ void corto_logprint(
             case 'v': corto_logprint_kind(cur, kind); break;
             case 'k': corto_logprint_kind(cur, kind); break; /* Deprecated */
             case 'c': 
-                if (categoryStr) corto_buffer_append(cur, categoryStr); 
-                else ret = corto_logprint_categories(cur, categories); 
+                if (categoryStr) {
+                    corto_buffer_append(cur, categoryStr); 
+                } else {
+                    if (!corto_log_shouldEmbedCategories) {
+                        int i = 0; while (data->categories[i]) i ++;
+                        if (i) data->frames[i - 1].count ++;
+
+                        char *indent = corto_log_categoryIndent(data->categories, 0);
+                        corto_buffer_appendstr(cur, indent);
+                        free(indent);
+                    }
+                    ret = corto_logprint_categories(cur, categories);                     
+                }
                 break;
             case 'f': ret = corto_logprint_file(cur, file); break;
             case 'l': ret = corto_logprint_line(cur, line); break;
@@ -714,9 +760,11 @@ char* corto_log_parseComponents(
     int count = 0;
     corto_log_tlsData *data = corto_getThreadData();
 
-    while (data->categories[count]) {
-        categories[count] = data->categories[count];
-        count ++;
+    if (corto_log_shouldEmbedCategories) {
+        while (data->categories[count]) {
+            categories[count] = data->categories[count];
+            count ++;
+        }
     }
 
     for (ptr = msg; (ch = *ptr) && (isalpha(ch) || isdigit(ch) || (ch == ':') || (ch == '/') || (ch == '_')); ptr++) {
@@ -1134,6 +1182,8 @@ int _corto_log_push(
     char *category) 
 {
     corto_log_tlsData *data = corto_getThreadData();
+
+    char *indent = corto_log_categoryIndent(data->categories, -1);
     
     /* Clear any errors before pushing a new stack */
     corto_throw_lasterror(data);
@@ -1150,10 +1200,39 @@ int _corto_log_push(
         data->frames[i].file = corto_log_stripFunctionName(file);
         data->frames[i].line = 0; /* Line is only set if an error is thrown for this category */
         data->frames[i].function = function;
+        data->frames[i].count = 0;
+
+        if (i) {
+            data->frames[i - 1].count ++;
+        }
+
+        if (!corto_log_shouldEmbedCategories) {
+            if (i) {
+                fprintf(
+                    stderr, 
+                    "%s%s├>%s %s%s%s\n", 
+                    indent, 
+                    CORTO_GREY,
+                    CORTO_NORMAL,
+                    CORTO_MAGENTA, 
+                    category, 
+                    CORTO_NORMAL);
+            } else {
+                fprintf(
+                    stderr, 
+                    "%s%s%s\n", 
+                    CORTO_MAGENTA, 
+                    category, 
+                    CORTO_NORMAL);
+            }
+        }
+
         return 0;
     } else {
         return -1;
     }
+
+    free(indent);
 }
 
 void corto_log_pop(void) {
@@ -1173,7 +1252,31 @@ void corto_log_pop(void) {
     data->categories[i] = NULL;
     data->frames[i].category = NULL;
     data->frames[i].file = NULL;
-    data->frames[i].line = 0;
+    data->frames[i].line = 0; 
+
+    if (i) {
+        data->frames[i - 1].count += data->frames[i].count;
+    }
+
+    if (!corto_log_shouldEmbedCategories) {
+        if (i) {
+            char *indent = corto_log_categoryIndent(data->categories, 0);
+            if (data->frames[i].count) {
+                fprintf(
+                    stderr, 
+                    "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);
+            }
+            free(indent);
+        } else {
+            fprintf(stderr, "%s+%s\n", CORTO_GREY, CORTO_NORMAL);
+        }
+    }    
+}
+
+void corto_log_embedCategories(
+    bool embed)
+{
+    corto_log_shouldEmbedCategories = embed;
 }
 
 int16_t corto_log_init(void) {

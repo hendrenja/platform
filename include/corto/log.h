@@ -139,6 +139,12 @@ int _corto_log_push(
 CORTO_EXPORT 
 void corto_log_pop(void);
 
+/** Embed categories in logmessage or print them on push/pop
+ * 
+ */
+CORTO_EXPORT
+void corto_log_embedCategories(
+    bool embed);
 
 /* -- Registering handlers for logging -- */
 
@@ -458,19 +464,19 @@ void corto_backtrace(
 
 /* -- Helper macro's -- */
 
-#define corto_critical(...) _corto_critical(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
-#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
-#define corto_error(...) _corto_error(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
-#define corto_warning(...) _corto_warning(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
-#define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, __PRETTY_FUNCTION__, category);
+#define corto_critical(...) _corto_critical(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_error(...) _corto_error(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_warning(...) _corto_warning(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);
 #define corto_error_fl(f, l, ...) _corto_error(f, l, __VA_ARGS__)
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, __VA_ARGS__)
 #ifndef NDEBUG
-#define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, __PRETTY_FUNCTION__, condition, "(" #condition ") " __VA_ARGS__);}
-#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
-#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
-#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
-#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__);}
+#define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, CORTO_FUNCTION, condition, "(" #condition ") " __VA_ARGS__);}
+#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
+#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
+#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
+#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)
