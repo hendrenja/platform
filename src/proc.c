@@ -24,7 +24,6 @@
 corto_proc corto_proc_run(const char* exec, char *argv[]) {
     pid_t pid = fork();
 
-
     if (pid == 0) {
 
         /* Child process */
@@ -117,14 +116,23 @@ int corto_proc_wait(corto_proc pid, int8_t *rc) {
     return result;
 }
 
+#define BUFFER_SIZE (256)
+
 /* Simple blocking function to create and wait for a process */
 int corto_proc_cmd(char* cmd, int8_t *rc) {
     int pid;
     char *args[CORTO_MAX_CMD_ARGS];
-    char buffer[CORTO_MAX_CMD];
-    strcpy(buffer, cmd);
+    char stack_buffer[BUFFER_SIZE];
+    char *buffer = stack_buffer;
 
     corto_debug("cmd: %s", cmd);
+
+    int len = strlen(cmd);
+    if (len >= BUFFER_SIZE) {
+        buffer = malloc(len + 1);
+    }
+
+    strcpy(buffer, cmd);    
 
     /* Split up commands */
     char ch, *ptr;
@@ -146,8 +154,10 @@ int corto_proc_cmd(char* cmd, int8_t *rc) {
         goto error;
     }
 
+    if (buffer != stack_buffer) free(buffer);
     return corto_proc_wait(pid, rc);
 error:
+    if (buffer != stack_buffer) free(buffer);
     return -1;
 }
 

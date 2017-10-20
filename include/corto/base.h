@@ -144,11 +144,8 @@ extern "C" {
  * length will take advantage of the memory. */
 #define CORTO_MAX_TLS_STRINGS_MAX (1024)
 
-/* Maximum length of a command (to run a process) */
-#define CORTO_MAX_CMD (1024)
-
 /* Maximum number of arguments for command */
-#define CORTO_MAX_CMD_ARGS (64)
+#define CORTO_MAX_CMD_ARGS (256)
 
 /* Maximum number of operations in an id expression */
 #define CORTO_MATCHER_MAX_OP (32)
@@ -209,6 +206,8 @@ extern int8_t CORTO_DEBUG_ENABLED;
 #define CORTO_GREY    "\033[0;37m"
 #define CORTO_NORMAL  "\033[0;49m"
 #define CORTO_BOLD    "\033[1;49m"
+
+#define CORTO_FUNCTION __func__
 
 /* Macro used to prevent type checking macro's from expanding */
 #define ___ 
