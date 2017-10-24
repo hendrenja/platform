@@ -35,6 +35,7 @@ FILE* corto_file_open(
     const char* mode)
 {
     FILE *result = fopen(filename, mode);
+
     if (!result && (strchr(mode, 'a') || strchr(mode, 'w'))) {
         if (errno == ENOENT) {
             char *dir = corto_path_dirname(filename);
@@ -45,7 +46,7 @@ FILE* corto_file_open(
             free(dir);
 
             /* Retry */
-            if (!(result = corto_file_open(filename, mode))) {
+            if (!(result = fopen(filename, mode))) {
                 printError(errno, filename);
                 goto error;
             }
@@ -113,6 +114,8 @@ bool corto_file_test(
             fclose(exists);
         } else if ((errno != ENOENT) && (errno != ENOTDIR)) {
             corto_seterr("%s: %s", file, strerror(errno));
+        } else {
+            errno = 0;
         }
     }
 
