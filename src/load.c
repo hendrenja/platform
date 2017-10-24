@@ -625,6 +625,7 @@ static char* corto_locatePackageIntern(
         } else {
             if (corto_lasterr() != NULL) {
                 targetErr = corto_strdup(corto_lasterr());
+                fileError = TRUE;
                 corto_seterr(NULL);
             }
         }
@@ -655,6 +656,7 @@ static char* corto_locatePackageIntern(
                 } else {
                     if (corto_lasterr() != NULL) {
                         homeErr = corto_strdup(corto_lasterr());
+                        fileError = TRUE;
                         corto_seterr(NULL);
                     }
                 }
@@ -693,6 +695,7 @@ static char* corto_locatePackageIntern(
                 } else {
                     if (corto_lasterr() != NULL) {
                         usrErr = corto_strdup(corto_lasterr());
+                        fileError = TRUE;
                         corto_seterr(NULL);
                     }
                 }
