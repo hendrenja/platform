@@ -147,8 +147,6 @@ int corto_cp_file(
     const char *src, 
     const char *dst)
 {
-    int _errno = 0;
-    char msg[PATH_MAX];
     FILE *destinationFile = NULL;
     FILE *sourceFile = NULL;
     char *fullDst = (char*)dst;
@@ -366,7 +364,6 @@ int corto_symlink(
             free(dir);
 
         } else if (errno == EEXIST) {
-            char *link;
             if (!corto_checklink(newname, fullname)) {
                 /* If a file with specified name already exists, remove existing file */
                 if (corto_rm(newname)) {
@@ -600,8 +597,10 @@ int16_t corto_dir_collectRecursive(
     corto_iter it;
 
     /* Move to current directory */
-    if (!(stack = corto_dirstack_push(stack, name))) {
-        goto stack_error;
+    if (name && name[0]) {
+        if (!(stack = corto_dirstack_push(stack, name))) {
+            goto stack_error;
+        }
     }
 
     /* Obtain iterator to current directory */
@@ -627,7 +626,9 @@ int16_t corto_dir_collectRecursive(
         }
     }
 
-    corto_dirstack_pop(stack);
+    if (name && name[0]) {
+        corto_dirstack_pop(stack);
+    }
 
     return 0;
 error:
@@ -673,6 +674,7 @@ int16_t corto_dir_iter(
             result.release = corto_dir_releaseRecursiveFilter;
         } else {
             struct corto_dir_filteredIter *ctx = corto_alloc(sizeof(struct corto_dir_filteredIter));
+
             ctx->files = opendir(name);
             if (!ctx->files) {
                 free(ctx);
