@@ -278,7 +278,7 @@ char* corto_log_categoryString(
 }
 
 static 
-char* corto_log_tokenize(
+char* corto_log_colorize(
     char *msg) 
 {
     corto_buffer buff = CORTO_BUFFER_INIT;
@@ -407,7 +407,7 @@ int corto_logprint_msg(
     }
 
     if (!strchr(msg, '\033')) {
-        tokenized = corto_log_tokenize(msg);
+        tokenized = corto_log_colorize(msg);
     }
     corto_buffer_appendstr(buf, tokenized);
     if (tokenized != msg) corto_dealloc(tokenized);
@@ -489,6 +489,7 @@ void corto_logprint(
     corto_buffer buf = CORTO_BUFFER_INIT, *cur;
     char *fmtptr, ch;
     corto_log_tlsData *data = corto_getThreadData();
+    bool modified = false;
 
     bool 
         prevSeparatedBySpace = TRUE, 
@@ -520,9 +521,11 @@ void corto_logprint(
                         int i = 0; while (data->categories[i]) i ++;
                         if (i) data->frames[i - 1].count ++;
 
-                        char *indent = corto_log_categoryIndent(data->categories, 0);
-                        corto_buffer_appendstr(cur, indent);
-                        free(indent);
+                        if (!modified) {
+                            char *indent = corto_log_categoryIndent(data->categories, 0);
+                            corto_buffer_appendstr(cur, indent);
+                            free(indent);
+                        }
                     }
                     ret = corto_logprint_categories(cur, categories);                     
                 }
@@ -567,6 +570,7 @@ void corto_logprint(
                 }
             }
 
+            modified = ret;
             prevSeparatedBySpace = separatedBySpace;
             fmtptr += 1;
             inParentheses = false;
@@ -575,6 +579,7 @@ void corto_logprint(
                 inParentheses = true;
             } else {
                 corto_buffer_appendstrn(&buf, &ch, 1);
+                modified = true;
                 inParentheses = false;
             }
         }
@@ -597,10 +602,6 @@ void corto_logprint(
 static 
 char* corto_getLastError(void) {
     corto_log_tlsData *data = corto_getThreadData();
-    if ((corto_log_verbosityGet() == CORTO_DEBUG) || CORTO_APP_STATUS) {
-        corto_logprint(stderr, CORTO_DEBUG, NULL, NULL, 0, NULL, "catched error", NULL);
-        corto_backtrace(stderr);
-    }
     data->viewed = TRUE;
     return data->lastFrames[0].error;
 }
@@ -728,12 +729,15 @@ void corto_log_setError(
                 data->lastFrames[i].category = strdup(data->frames[count - i].category);
             }
             data->lastFrames[i].file = NULL;
+        } else {
+            /* Clear error */
+            data->lastFrames[data->lastFrameSp].error = NULL;
         }
     } else {
         data->lastFrames[data->lastFrameSp].file = file;
         data->lastFrames[data->lastFrameSp].line = line;
         data->lastFrames[data->lastFrameSp].function = function;        
-        data->lastFrames[data->lastFrameSp].error = error ? corto_log_tokenize(error) : NULL;
+        data->lastFrames[data->lastFrameSp].error = error ? corto_log_colorize(error) : NULL;
     }
 
     if (corto_log_verbosityGet() == CORTO_DEBUG) {
@@ -963,7 +967,6 @@ void corto_seterrv(
 {
     char *err = NULL, *categories = NULL;
     corto_log_tlsData *data = corto_getThreadData();
-    int count = 0;
 
     if (data) {
         categories = corto_log_categoryString(data->categories);
@@ -983,7 +986,6 @@ void corto_seterrv(
         } else {
             corto_logprint(stderr, CORTO_DEBUG, NULL, file, line, function, err, NULL);
         }
-        corto_backtrace(stderr);
     }
 
     if (err) corto_dealloc(err);
