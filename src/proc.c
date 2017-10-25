@@ -125,7 +125,7 @@ int corto_proc_cmd(char* cmd, int8_t *rc) {
     char stack_buffer[BUFFER_SIZE];
     char *buffer = stack_buffer;
 
-    corto_debug("cmd: %s", cmd);
+    corto_trace("exec '%s'", cmd);
 
     int len = strlen(cmd);
     if (len >= BUFFER_SIZE) {
