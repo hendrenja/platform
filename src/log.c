@@ -323,7 +323,7 @@ char* corto_log_colorize(
         prev = ch;
     }
 
-    if (isNum || isStr) {
+    if (isNum || isStr || isVar) {
         corto_buffer_appendstr(&buff, CORTO_NORMAL);
     }
 
@@ -523,6 +523,7 @@ void corto_logprint(
                             if (i > 1) {
                                 indent = corto_log_categoryIndent(data->categories, i - 1);
                             }
+
                             if (!data->frames[i].printed) {
                                 if (i) {
                                     fprintf(
