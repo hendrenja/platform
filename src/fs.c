@@ -282,8 +282,6 @@ int16_t corto_cp(
 
     corto_trace("cp '%s' => '%s'", src, dst);
 
-    corto_log_push("cp");
-
     if (!corto_file_test(src)) {
         corto_seterr("source '%s' does not exist", src);
         goto error;
@@ -295,7 +293,6 @@ int16_t corto_cp(
         result = corto_cp_file(src, dst);
     }
 
-    corto_log_pop();
     return result;
 error:
     corto_log_pop();
@@ -438,18 +435,34 @@ error:
 int corto_rm(const char *name) {
     int result = 0;
 
-    corto_trace("rm '%s'", name);    
-
-    if (corto_isdir(name)) {
-        return corto_rmtree(name);
-    } else if (remove(name)) {
-
-        /* Don't care if file didn't exist since the postcondition
-         * is that file doesn't exist. */
+    /* First try to remove file. The 'remove' function may fail if 'name' is a
+     * directory that is not empty, however it may also be a link to a directory
+     * in which case corto_isdir would also return true.
+     *
+     * For that reason, the function should not always perform a recursive delete
+     * if a directory is encountered, because in case of a link, only the link
+     * should be removed, not the contents of its target directory. 
+     *
+     * Trying to remove the file first is a solution to this problem that works
+     * on any platform, even the ones that do not support links (as opposed to
+     * checking if the file is a link first).
+     */
+    if (remove(name)) {
         if (errno != ENOENT) {
-            result = -1;
-            corto_seterr(strerror(errno));
+            if (corto_isdir(name)) {
+                corto_trace("rm '%s' (D)", name);
+                return corto_rmtree(name);
+            } else {
+                result = -1;
+                corto_seterr(strerror(errno));
+            }
+        } else {
+            /* Don't care if file doesn't exist */
         }
+    }
+
+    if (!result) {
+        corto_trace("rm '%s'", name);
     }
 
     return result;
