@@ -1181,7 +1181,7 @@ int _corto_log_push(
     char const *file, 
     unsigned int line,
     char const *function,    
-    char *category) 
+    const char *category) 
 {
     corto_log_tlsData *data = corto_getThreadData();
 

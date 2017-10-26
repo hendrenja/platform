@@ -132,7 +132,7 @@ int _corto_log_push(
     char const *file,
     unsigned int line,
     char const *function,
-    char *category);
+    const char *category);
 
 /** Pop a category from the category stack.
  */
