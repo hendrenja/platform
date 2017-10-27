@@ -285,45 +285,86 @@ char* corto_log_colorize(
     bool isNum = FALSE;
     char isStr = '\0';
     bool isVar = false;
+    bool overrideColor = false;
 
     for (ptr = msg; (ch = *ptr); ptr++) {
 
-        if (isNum && !isdigit(ch) && !isalpha(ch) && (ch != '.') && (ch != '%')) {
-            corto_buffer_appendstr(&buff, CORTO_NORMAL);
-            isNum = FALSE;
-        }
-        if (isStr && (isStr == ch) && !isalpha(ptr[1]) && (prev != '\\')) {
-            isStr = '\0';
-        } else if (((ch == '\'') || (ch == '"')) && !isStr && !isalpha(prev) && (prev != '\\')) {
-            corto_buffer_appendstr(&buff, CORTO_CYAN);
-            isStr = ch;
+        if (!overrideColor) {
+            if (isNum && !isdigit(ch) && !isalpha(ch) && (ch != '.') && (ch != '%')) {
+                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                isNum = FALSE;
+            }
+            if (isStr && (isStr == ch) && !isalpha(ptr[1]) && (prev != '\\')) {
+                isStr = '\0';
+            } else if (((ch == '\'') || (ch == '"')) && !isStr && !isalpha(prev) && (prev != '\\')) {
+                corto_buffer_appendstr(&buff, CORTO_CYAN);
+                isStr = ch;
+            }
+
+            if ((isdigit(ch) || (ch == '%' && isdigit(prev)) || (ch == '-' && isdigit(ptr[1]))) && !isNum && !isStr && !isVar && !isalpha(prev) && !isdigit(prev) && (prev != '_') && (prev != '.')) {
+                corto_buffer_appendstr(&buff, CORTO_GREEN);
+                isNum = TRUE;
+            }
+
+            if (isVar && !isalpha(ch) && !isdigit(ch) && ch != '_') {
+                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                isVar = FALSE;
+            }
+
+            if (!isStr && !isVar && ch == '$' && isalpha(ptr[1])) {
+                corto_buffer_appendstr(&buff, CORTO_MAGENTA);
+                isVar = TRUE;
+            }
         }
 
-        if ((isdigit(ch) || (ch == '%' && isdigit(prev)) || (ch == '-' && isdigit(ptr[1]))) && !isNum && !isStr && !isVar && !isalpha(prev) && !isdigit(prev) && (prev != '_') && (prev != '.')) {
-            corto_buffer_appendstr(&buff, CORTO_GREEN);
-            isNum = TRUE;
-        }
+        if (!isVar && !isStr && !isNum && ch == '#' && ptr[1] == '[') {
+            bool isColor = true;
+            overrideColor = true;
 
-        if (isVar && !isalpha(ch) && !isdigit(ch) && ch != '_') {
-            corto_buffer_appendstr(&buff, CORTO_NORMAL);
-            isVar = FALSE;
-        }
+            /* Custom colors */
+            if (!strncmp(&ptr[2], "green]", strlen("green]"))) {
+                corto_buffer_appendstr(&buff, CORTO_GREEN);
+            } else if (!strncmp(&ptr[2], "red]", strlen("red]"))) {
+                corto_buffer_appendstr(&buff, CORTO_RED);
+            } else if (!strncmp(&ptr[2], "magenta]", strlen("magenta]"))) {
+                corto_buffer_appendstr(&buff, CORTO_MAGENTA);
+            } else if (!strncmp(&ptr[2], "cyan]", strlen("cyan]"))) {
+                corto_buffer_appendstr(&buff, CORTO_CYAN);
+            } else if (!strncmp(&ptr[2], "yellow]", strlen("yellow]"))) {
+                corto_buffer_appendstr(&buff, CORTO_YELLOW); 
+            } else if (!strncmp(&ptr[2], "grey]", strlen("grey]"))) {
+                corto_buffer_appendstr(&buff, CORTO_GREY);                 
+            } else if (!strncmp(&ptr[2], "white]", strlen("white]"))) {
+                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+            } else if (!strncmp(&ptr[2], "bold]", strlen("bold]"))) {
+                corto_buffer_appendstr(&buff, CORTO_BOLD);                                                
+            } else if (!strncmp(&ptr[2], "normal]", strlen("normal]"))) {
+                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                overrideColor = false;
+            } else {
+                isColor = false;
+                overrideColor = false;
+            }
 
-        if (!isStr && !isVar && ch == '$' && isalpha(ptr[1])) {
-            corto_buffer_appendstr(&buff, CORTO_MAGENTA);
-            isVar = TRUE;
+            if (isColor) {
+                ptr += 2;
+                while ((ch = *ptr) != ']') ptr ++;
+                ch = *(++ptr);
+            }
         }
 
         corto_buffer_appendstrn(&buff, ptr, 1);
 
-        if (((ch == '\'') || (ch == '"')) && !isStr) {
-            corto_buffer_appendstr(&buff, CORTO_NORMAL);
+        if (!overrideColor) {
+            if (((ch == '\'') || (ch == '"')) && !isStr) {
+                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+            }
         }
 
         prev = ch;
     }
 
-    if (isNum || isStr || isVar) {
+    if (isNum || isStr || isVar || overrideColor) {
         corto_buffer_appendstr(&buff, CORTO_NORMAL);
     }
 
@@ -678,7 +719,9 @@ void corto_throw_lasterror(
             corto_buffer_appendstrn(&buf, " (", 2);
             corto_logprint_function(&buf, data->lastFrames[i].function);
             corto_buffer_appendstrn(&buf, ")", 1);
-            corto_buffer_append(&buf, " %s%s%s", CORTO_MAGENTA, data->lastFrames[i].category, CORTO_NORMAL);
+            if (data->lastFrames[i].category) {
+                corto_buffer_append(&buf, " %s%s%s", CORTO_MAGENTA, data->lastFrames[i].category, CORTO_NORMAL);
+            }
             if (data->lastFrames[i].error) {
                 corto_buffer_append(&buf, ": %s", data->lastFrames[i].error);     
             }
@@ -836,7 +879,7 @@ corto_log_verbosity corto_logv(
     char const *function, 
     corto_log_verbosity kind, 
     unsigned int level, 
-    char* fmt, 
+    const char *fmt, 
     va_list arg, 
     FILE* f) 
 {
@@ -901,7 +944,7 @@ void _corto_assertv(
     unsigned int line, 
     char const *function,    
     unsigned int condition, 
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     if (!condition) {
@@ -915,7 +958,7 @@ void corto_criticalv(
     char const *file, 
     unsigned int line, 
     char const *function,        
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_CRITICAL, 0, fmt, args, stderr);
@@ -928,7 +971,7 @@ void corto_debugv(
     char const *file, 
     unsigned int line,
     char const *function, 
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_DEBUG, 0, fmt, args, stderr);
@@ -938,7 +981,7 @@ void corto_tracev(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_TRACE, 0, fmt, args, stderr);
@@ -948,7 +991,7 @@ void corto_warningv(
     char const *file, 
     unsigned int line,
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_WARNING, 0, fmt, args, stderr);
@@ -958,7 +1001,7 @@ void corto_errorv(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_ERROR, 0, fmt, args, stderr);
@@ -971,7 +1014,7 @@ void corto_okv(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_OK, 0, fmt, args, stderr);
@@ -981,7 +1024,7 @@ void corto_infov(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     va_list args) 
 {
     corto_logv(file, line, function, CORTO_INFO, 0, fmt, args, stderr);
@@ -1036,7 +1079,7 @@ void _corto_debug(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1050,7 +1093,7 @@ void _corto_trace(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1064,7 +1107,7 @@ void _corto_info(
     char const *file, 
     unsigned int line,
     char const *function, 
-    char* fmt, ...) 
+    const char *fmt, ...) 
 {
     va_list arglist;
 
@@ -1077,7 +1120,7 @@ void _corto_ok(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1091,7 +1134,7 @@ void _corto_warning(
     char const *file, 
     unsigned int line, 
     char const *function,    
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1105,7 +1148,7 @@ void _corto_error(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1119,7 +1162,7 @@ void _corto_critical(
     char const *file, 
     unsigned int line, 
     char const *function,
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
@@ -1134,7 +1177,7 @@ void _corto_assert(
     unsigned int line, 
     char const *function,
     unsigned int condition, 
-    char* fmt, 
+    const char *fmt, 
     ...) 
 {
     va_list arglist;
