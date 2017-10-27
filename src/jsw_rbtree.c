@@ -325,7 +325,6 @@ int jsw_rbhaskey_w_cmp ( jsw_rbtree_t *tree, const void *key, void** data, corto
 */
 int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bool overwrite )
 {
-  CORTO_UNUSED(overwrite);
 
   if (old_out)
     *old_out = NULL;
@@ -385,6 +384,7 @@ int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bo
       */
       int eq = tree->cmp ( tree->ctx, q->key, key );
       if ( eq == 0 ) {
+        if (overwrite) q->data = data;
         if (old_out)
           *old_out = q->data;
         break;

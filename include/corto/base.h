@@ -221,7 +221,7 @@ extern int8_t CORTO_DEBUG_ENABLED;
 typedef char corto_id[CORTO_MAX_PATH_LENGTH];
 
 /* Builtin collection-implementation definitions */
-typedef struct corto_rbtree_s* corto_rbtree;
+typedef struct corto_rb_s* corto_rb;
 typedef struct corto_ll_s* corto_ll;
 
 /* Builtin procedure kinds */
@@ -290,6 +290,7 @@ void base_deinit(void);
 #include <corto/buffer.h>
 #include <corto/iter.h>
 #include <corto/ll.h>
+#include <corto/rb.h>
 #include <corto/string.h>
 #include <corto/os.h>
 #include <corto/time.h>
