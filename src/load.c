@@ -398,7 +398,7 @@ static int corto_loadLibrary(char* fileName, bool validated, corto_dl *dl_out, i
 
     corto_assert(fileName != NULL, "NULL passed to corto_loadLibrary");
 
-    corto_throw(NULL);
+    corto_catch();
     if (!validated) {
         dl = corto_load_validLibrary(fileName, &build);
     } else {

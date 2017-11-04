@@ -131,7 +131,7 @@ error_name:
 
 static
 int corto_cp_file(
-    const char *src, 
+    const char *src,
     const char *dst)
 {
     FILE *destinationFile = NULL;
@@ -205,12 +205,12 @@ error_CloseFiles:
     if (sourceFile) fclose(sourceFile);
     if (destinationFile) fclose(destinationFile);
 error:
-    return -1;    
+    return -1;
 }
 
 static
 int16_t corto_cp_dir(
-    const char *src, 
+    const char *src,
     const char *dst)
 {
     if (corto_mkdir(dst)) {
@@ -253,8 +253,8 @@ error:
 }
 
 int16_t corto_cp(
-    const char *src, 
-    const char *dst) 
+    const char *src,
+    const char *dst)
 {
     int16_t result;
 
@@ -308,7 +308,7 @@ nomatch:
 
 int corto_symlink(
     const char *oldname,
-    const char *newname) 
+    const char *newname)
 {
     char *fullname = NULL;
     if (oldname[0] != '/') {
@@ -319,7 +319,7 @@ int corto_symlink(
         fullname = (char*)oldname;
     }
 
-    corto_trace("symlink '%s' => '%s'", newname, fullname);    
+    corto_trace("symlink '%s' => '%s'", newname, fullname);
 
     if (symlink(fullname, newname)) {
 
@@ -419,7 +419,7 @@ int corto_rm(const char *name) {
      *
      * For that reason, the function should not always perform a recursive delete
      * if a directory is encountered, because in case of a link, only the link
-     * should be removed, not the contents of its target directory. 
+     * should be removed, not the contents of its target directory.
      *
      * Trying to remove the file first is a solution to this problem that works
      * on any platform, even the ones that do not support links (as opposed to
@@ -508,7 +508,7 @@ struct corto_dir_filteredIter {
 
 static
 bool corto_dir_hasNext(
-    corto_iter *it) 
+    corto_iter *it)
 {
     struct dirent *ep = readdir(it->ctx);
     while (ep && *ep->d_name == '.') {
@@ -524,14 +524,14 @@ bool corto_dir_hasNext(
 
 static
 void* corto_dir_next(
-    corto_iter *it) 
+    corto_iter *it)
 {
     return it->data;
 }
 
 static
 bool corto_dir_hasNextFilter(
-    corto_iter *it) 
+    corto_iter *it)
 {
     struct corto_dir_filteredIter *ctx = it->ctx;
     struct dirent *ep = NULL;
@@ -549,14 +549,14 @@ bool corto_dir_hasNextFilter(
 
 static
 void corto_dir_release(
-    corto_iter *it) 
+    corto_iter *it)
 {
     closedir(it->ctx);
 }
 
 static
 void corto_dir_releaseFilter(
-    corto_iter *it) 
+    corto_iter *it)
 {
     struct corto_dir_filteredIter *ctx = it->ctx;
     closedir(ctx->files);
@@ -580,10 +580,10 @@ void corto_dir_releaseRecursiveFilter(
 
 static
 int16_t corto_dir_collectRecursive(
-    const char *name, 
-    corto_dirstack stack, 
-    corto_idmatch_program filter, 
-    corto_ll files) 
+    const char *name,
+    corto_dirstack stack,
+    corto_idmatch_program filter,
+    corto_ll files)
 {
     corto_iter it;
 
@@ -715,12 +715,12 @@ corto_dirstack corto_dirstack_push(
     corto_ll_append(stack, strdup(corto_cwd()));
 
     if (corto_chdir(dir)) {
+        corto_throw(NULL);
         goto error;
     }
 
     return stack;
 error:
-    corto_throw("dirstack_push failed");
     return NULL;
 }
 

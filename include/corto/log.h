@@ -442,6 +442,11 @@ void corto_catch(void);
 CORTO_EXPORT 
 void corto_raise(void);
 
+/** Check for unraised exceptions (internal usage).
+ */
+CORTO_EXPORT 
+void __corto_raise_check(void);
+
 /** Propagate information to calling function.
  * This function is useful when a function wants to propagate a message that
  * is does not necessarily indicate an error. The framework will not report a
@@ -479,10 +484,10 @@ char *corto_lasterr();
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #ifndef NDEBUG
 #define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, CORTO_FUNCTION, condition, "(" #condition ") " __VA_ARGS__);}
-#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
-#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
-#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
-#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);}
+#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)

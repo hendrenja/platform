@@ -52,6 +52,7 @@ typedef struct corto_log_codeframe {
     unsigned int line;
     char *error;
     char *detail;
+    bool thrown; /* Is frame thrown or copied from category stack */
 } corto_log_codeframe;
 
 /* One frame for each category */
@@ -75,6 +76,7 @@ typedef struct corto_log_tlsData {
     char *exceptionCategories[CORTO_MAX_LOG_CATEGORIES + 1];
     corto_log_frame exceptionFrames[CORTO_MAX_LOG_CATEGORIES + 1];
     uint32_t exceptionCount;
+    bool viewed;
     char *backtrace;
 
     /* Current category */
@@ -532,7 +534,7 @@ int corto_logprint_function(
     char const *function) 
 {
     if (function) {
-        corto_buffer_append(buf, "%s%s%s", CORTO_GREY, function, CORTO_NORMAL);
+        corto_buffer_append(buf, "%s%s%s", CORTO_BLUE, function, CORTO_NORMAL);
         return 1;
     } else {
         return 0;
@@ -712,6 +714,14 @@ void corto_raise_codeframe(
     char *categories[],
     bool first)
 {
+    if (frame->category) {
+        char *categoryStr = corto_log_categoryString(categories);
+        if (categoryStr) {
+            corto_buffer_append(buf, " %s", categoryStr);
+            free(categoryStr);
+        }
+    }
+
     if (codeframe->file) {
         corto_buffer_appendstr(buf, " ");
         corto_logprint_file(buf, codeframe->file);
@@ -725,20 +735,13 @@ void corto_raise_codeframe(
         corto_logprint_function(buf, codeframe->function);
         corto_buffer_appendstrn(buf, ")", 1);
     }
-    if (frame->category) {
-        char *categoryStr = corto_log_categoryString(categories);
-        if (categoryStr) {
-            corto_buffer_append(buf, " %s", categoryStr);
-            free(categoryStr);
-        }
-    }
     if (codeframe->error) {
         corto_buffer_append(buf, ": %s", codeframe->error);     
     }       
 
     char *str = corto_buffer_str(buf);
     if (str) {
-        if (codeframe->error && !first) {
+        if (codeframe->thrown && !first) {
             printf("     %sfrom%s%s\n", CORTO_RED, CORTO_NORMAL, str);
         } else if (first) {
             printf("%sexception%s%s\n", CORTO_RED, CORTO_NORMAL, str);
@@ -758,7 +761,7 @@ void corto_raise_intern(
     corto_log_tlsData *data,
     bool clearCategory) 
 {
-    if (data->exceptionCount) {
+    if (!data->viewed && data->exceptionCount) {
         int category, function, count = 0, total = 0;
         corto_buffer buf = CORTO_BUFFER_INIT;
 
@@ -788,13 +791,15 @@ void corto_raise_intern(
             }
         }
 
-        printf("     %sproc%s %s [%d]\n", 
-            CORTO_RED, CORTO_NORMAL, corto_log_appName, corto_proc());
+        printf("     %sproc%s %s%s %s[%s%d%s]\n", 
+            CORTO_RED, CORTO_NORMAL, CORTO_GREY, corto_log_appName, CORTO_NORMAL, CORTO_GREY, corto_proc(), CORTO_NORMAL);
         printf("\n");
 
         if (clearCategory) {
             data->exceptionCount = 0;
         }
+
+        data->viewed = true;
     }
 }
 
@@ -850,69 +855,61 @@ void corto_log_setError(
     corto_log_tlsData *data = corto_getThreadData();
     if (data->backtrace) corto_dealloc(data->backtrace);
 
-    if (error) {
-        if (!data->exceptionCount && !data->exceptionFrames[0].sp) {
-            data->stack_marker = (void*)&stack_marker;
+    data->viewed = false;
 
-            /* Copy all current frames to exception cache in reverse order */
-            int i;
-            for (i = 1; i <= data->sp; i ++) {
-                data->exceptionFrames[i - 1] = data->frames[data->sp - i];
-                data->exceptionFrames[i - 1].category = strdup(data->frames[data->sp - i].category);
-                data->exceptionFrames[i - 1].sp = 0;
-            }
-            data->exceptionCount = data->sp + 1;
+    if (!data->exceptionCount && !data->exceptionFrames[0].sp) {
+        data->stack_marker = (void*)&stack_marker;
 
-            /* Copy category stack in normal order */
-            for (i = 1; i <= data->sp; i ++) {
-                data->exceptionCategories[i - 1] = data->exceptionFrames[data->sp - i].category;
-            }
-
-            /* Array must end with a NULL */
-            data->exceptionCategories[i - 1] = NULL;
-
-            /* Set error in top-level frame */
-            data->exceptionFrames[0].frames[0].file = strdup(file);
-            data->exceptionFrames[0].frames[0].function = strdup(function);
-            data->exceptionFrames[0].frames[0].line = line;            
-            data->exceptionFrames[0].frames[0].error = error ? corto_log_colorize(error) : NULL;
-            data->exceptionFrames[0].sp = 1;
-
-        } else {
-            corto_assert(
-                data->exceptionCount != 0, 
-                "no active exception to append to (sp = %d)",
-                data->exceptionFrames[0].sp);
-
-            /* Add another level to the error stack */
-            corto_log_frame *frame = &data->exceptionFrames[data->exceptionCount - data->sp - 1];
-
-            corto_assert(frame->sp < CORTO_MAX_LOG_CODEFRAMES, "max number of code frames reached");
-
-            if (data->stack_marker >= (void*)&stack_marker) {
-                corto_raise_intern(data, false);
-            } else {
-                frame->frames[frame->sp].file = strdup(file);
-                frame->frames[frame->sp].function = strdup(function);  
-                frame->frames[frame->sp].line = line;
-                frame->frames[frame->sp].error = error ? corto_log_colorize(error) : NULL;
-                frame->sp ++;
-            }
-        }
-
-        if (error && corto_log_verbosityGet() == CORTO_DEBUG) {
-            data->backtrace = corto_backtraceString();
-        }
-    } else {
-        /* If throw is called with NULL, clear out cached error */
+        /* Copy all current frames to exception cache in reverse order */
         int i;
-        if (data->exceptionCount) {
-            for (i = 0; i < data->exceptionCount - 1; i ++) {
-                corto_log_frame *frame = &data->exceptionFrames[i];
-                corto_frame_free(frame);
-            }
-            data->exceptionCount = 0;
+        for (i = 1; i <= data->sp; i ++) {
+            data->exceptionFrames[i - 1] = data->frames[data->sp - i];
+            data->exceptionFrames[i - 1].category = strdup(data->frames[data->sp - i].category);
+            data->exceptionFrames[i - 1].sp = 0;
         }
+        data->exceptionCount = data->sp + 1;
+
+        /* Copy category stack in normal order */
+        for (i = 1; i <= data->sp; i ++) {
+            data->exceptionCategories[i - 1] = data->exceptionFrames[data->sp - i].category;
+        }
+
+        /* Array must end with a NULL */
+        data->exceptionCategories[i - 1] = NULL;
+
+        /* Set error in top-level frame */
+        data->exceptionFrames[0].frames[0].file = strdup(file);
+        data->exceptionFrames[0].frames[0].function = strdup(function);
+        data->exceptionFrames[0].frames[0].line = line;            
+        data->exceptionFrames[0].frames[0].error = error ? corto_log_colorize(error) : NULL;
+        data->exceptionFrames[0].frames[0].thrown = true;
+        data->exceptionFrames[0].sp = 1;
+
+    } else {
+        corto_assert(
+            data->exceptionCount != 0, 
+            "no active exception to append to (sp = %d)",
+            data->exceptionFrames[0].sp);
+
+        /* Add another level to the error stack */
+        corto_log_frame *frame = &data->exceptionFrames[data->exceptionCount - data->sp - 1];
+
+        corto_assert(frame->sp < CORTO_MAX_LOG_CODEFRAMES, "max number of code frames reached");
+
+        if (data->stack_marker >= (void*)&stack_marker) {
+            corto_raise_intern(data, false);
+        } else {
+            frame->frames[frame->sp].file = strdup(file);
+            frame->frames[frame->sp].function = strdup(function);  
+            frame->frames[frame->sp].line = line;
+            frame->frames[frame->sp].error = error ? corto_log_colorize(error) : NULL;
+            frame->frames[frame->sp].thrown = true;
+            frame->sp ++;
+        }
+    }
+
+    if (error && corto_log_verbosityGet() == CORTO_DEBUG) {
+        data->backtrace = corto_backtraceString();
     }
 }
 
@@ -939,6 +936,7 @@ int _corto_log_push(
     frame->initial.file = strdup(corto_log_stripFunctionName(file));
     frame->initial.function = strdup(function);
     frame->initial.line = line;
+    frame->initial.thrown = false;
     frame->sp = 0;
 
     if (data->sp) {
@@ -1103,7 +1101,7 @@ corto_log_verbosity corto_logv(
         }
     }
 
-    corto_throw(NULL);
+    corto_catch();
 
     return kind;
 }
@@ -1419,12 +1417,26 @@ void corto_setinfo(
 
 void corto_catch(void)
 {
-    corto_throw(NULL);
+    /* Clear exception */
+    corto_log_tlsData *data = corto_getThreadData();    
+    int i;
+    if (data->exceptionCount) {
+        for (i = 0; i < data->exceptionCount - 1; i ++) {
+            corto_log_frame *frame = &data->exceptionFrames[i];
+            corto_frame_free(frame);
+        }
+        data->exceptionCount = 0;
+    }
 }
 
 void corto_raise(void) {
     corto_log_tlsData *data = corto_getThreadData();
     corto_raise_intern(data, true);
+}
+
+void __corto_raise_check(void) {
+    corto_log_tlsData *data = corto_getThreadData();
+    corto_raise_intern(data, false);
 }
 
 void corto_log_verbositySet(
