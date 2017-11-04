@@ -140,7 +140,7 @@ int32_t corto_pathToArray(char *path, char *elements[], char *sep) {
         do {
             /* Never parse more elements than maximum scope depth */
             if (count == CORTO_MAX_SCOPE_DEPTH) {
-                corto_seterr(
+                corto_throw(
                     "number of elements in path exceeds MAX_SCOPE_DEPTH (%d)",
                     CORTO_MAX_SCOPE_DEPTH);
                 goto error;

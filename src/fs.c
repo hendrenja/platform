@@ -22,17 +22,6 @@
 #include <corto/base.h>
 #include "idmatch.h"
 
-/*
- * Receives:
- * - the error code
- * - an initial message
- * The name for the error code will be appended.
- */
-static void printError(int e, const char *ctx) {
-    if (e) corto_seterr("%s: %s", ctx, strerror(e));
-    else  corto_seterr((char*)ctx);
-}
-
 int corto_touch(const char *file) {
     FILE* touch = NULL;
 
@@ -48,7 +37,7 @@ int corto_touch(const char *file) {
 
 int corto_chdir(const char *dir) {
     if (chdir(dir)) {
-        corto_seterr("%s '%s'", strerror(errno), dir);
+        corto_throw("%s '%s'", strerror(errno), dir);
         return -1;
     }
     return 0;
@@ -59,14 +48,13 @@ char* corto_cwd(void) {
     if (getcwd(cwd, sizeof(cwd))) {
         return corto_setThreadString(cwd);
     } else {
-        corto_seterr("%s", strerror(errno));
+        corto_throw("%s", strerror(errno));
         return NULL;
     }
 }
 
 int corto_mkdir(const char *fmt, ...) {
     int _errno = 0;
-    char msg[PATH_MAX];
 
     va_list args;
     va_start(args, fmt);
@@ -135,8 +123,7 @@ int corto_mkdir(const char *fmt, ...) {
 
     return 0;
 error:
-    sprintf(msg, "%s", name);
-    printError(errno, msg);
+    corto_throw("%s: %s", name, strerror(errno));
     corto_dealloc(name);
 error_name:
     return -1;
@@ -160,28 +147,28 @@ int corto_cp_file(
     }
 
     if (!(sourceFile = fopen(src, "rb"))) {
-        corto_seterr("cannot open '%s': %s", src, strerror(errno));
+        corto_throw("cannot open '%s': %s", src, strerror(errno));
         goto error;
     }
 
     if (!(destinationFile = fopen(fullDst, "wb"))) {
-        corto_seterr("cannot open '%s': %s", fullDst, strerror(errno));
+        corto_throw("cannot open '%s': %s", fullDst, strerror(errno));
         goto error_CloseFiles;
     }
 
     if (corto_getperm(src, &perm)) {
-        corto_seterr("cannot get permissions from '%s': %s", corto_lasterr());
+        corto_throw("cannot get permissions for '%s'", src);
         goto error_CloseFiles;
     }
 
     if (fseek(sourceFile, 0, SEEK_END)) {
-        corto_seterr("cannot seek '%s': %s", src, strerror(errno));
+        corto_throw("cannot seek '%s': %s", src, strerror(errno));
         goto error_CloseFiles;
     }
 
     size_t fileSize = ftell(sourceFile);
     if (fileSize == -1) {
-        corto_seterr("cannot get size from '%s': %s", src, strerror(errno));
+        corto_throw("cannot get size from '%s': %s", src, strerror(errno));
         goto error_CloseFiles;
     }
 
@@ -191,17 +178,17 @@ int corto_cp_file(
 
     size_t n;
     if ((n = fread(buffer, 1, fileSize, sourceFile)) != fileSize) {
-        corto_seterr("cannot read '%s': %s", src, strerror(errno));
+        corto_throw("cannot read '%s': %s", src, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
 
     if (fwrite(buffer, 1, fileSize, destinationFile) != fileSize) {
-        corto_seterr("cannot write to '%s': %s", fullDst, strerror(errno));
+        corto_throw("cannot write to '%s': %s", fullDst, strerror(errno));
         goto error_CloseFiles_FreeBuffer;
     }
 
     if (corto_setperm(fullDst, perm)) {
-        corto_seterr("failed to set permissions of '%s': %s", corto_lasterr());
+        corto_throw("failed to set permissions of '%s'", fullDst);
         goto error;
     }
 
@@ -226,8 +213,6 @@ int16_t corto_cp_dir(
     const char *src, 
     const char *dst)
 {
-    char *lasterr = NULL;
-
     if (corto_mkdir(dst)) {
         goto error;
     }
@@ -263,14 +248,7 @@ int16_t corto_cp_dir(
 
     return 0;
 error:
-    if (corto_lasterr()) {
-        /* In case something goes wrong with the next statement, preserve error */
-        lasterr = strdup(corto_lasterr());
-    }
-    if (corto_dirstack_pop(stack)) {
-        if (lasterr) corto_seterr(lasterr);
-    }
-    if (lasterr) free(lasterr);
+    corto_dirstack_pop(stack);
     return -1;
 }
 
@@ -283,7 +261,7 @@ int16_t corto_cp(
     corto_trace("cp '%s' => '%s'", src, dst);
 
     if (!corto_file_test(src)) {
-        corto_seterr("source '%s' does not exist", src);
+        corto_throw("source '%s' does not exist", src);
         goto error;
     }
 
@@ -356,7 +334,7 @@ int corto_symlink(
                     goto error;
                 }
             } else {
-                printError(old_errno, newname);
+                corto_throw("%s: %s", newname, strerror(old_errno));
             }
             free(dir);
 
@@ -381,7 +359,7 @@ int corto_symlink(
     return 0;
 error:
     if (fullname != oldname) free(fullname);
-    corto_seterr("symlink: %s", corto_lasterr());
+    corto_throw("symlink failed");
     return -1;
 }
 
@@ -391,7 +369,7 @@ int16_t corto_setperm(
 {
     corto_trace("setperm '%s' => %d", name, perm);
     if (chmod(name, perm)) {
-        corto_seterr("chmod: %s", strerror(errno));
+        corto_throw("chmod: %s", strerror(errno));
         return -1;
     }
     return 0;
@@ -404,7 +382,7 @@ int16_t corto_getperm(
     struct stat st;
 
     if (stat(name, &st) < 0) {
-        corto_seterr("getperm: %s", strerror(errno));
+        corto_throw("getperm: %s", strerror(errno));
         return -1;
     }
 
@@ -423,7 +401,7 @@ bool corto_isdir(const char *path) {
 
 int corto_rename(const char *oldName, const char *newName) {
     if (rename(oldName, newName)) {
-        corto_seterr(strerror(errno));
+        corto_throw(strerror(errno));
         goto error;
     }
     return 0;
@@ -454,7 +432,7 @@ int corto_rm(const char *name) {
                 return corto_rmtree(name);
             } else {
                 result = -1;
-                corto_seterr(strerror(errno));
+                corto_throw(strerror(errno));
             }
         } else {
             /* Don't care if file doesn't exist */
@@ -478,7 +456,7 @@ static int corto_rmtreeCallback(
     CORTO_UNUSED(typeflag);
     CORTO_UNUSED(ftwbuf);
     if (remove(path)) {
-        corto_seterr(strerror(errno));
+        corto_throw(strerror(errno));
         goto error;
     }
     return 0;
@@ -508,7 +486,7 @@ corto_ll corto_opendir(const char *name) {
         }
         closedir (dp);
     } else {
-        printError(errno, name);
+        corto_throw("%s: %s", name, strerror(errno));
     }
 
     return result;
@@ -666,7 +644,7 @@ int16_t corto_dir_iter(
         };
 
         if (!result.ctx) {
-            printError(errno, name);
+            corto_throw("%s: %s", name, strerror(errno));
             goto error;
         }
 
@@ -691,7 +669,7 @@ int16_t corto_dir_iter(
             ctx->files = opendir(name);
             if (!ctx->files) {
                 free(ctx);
-                printError(errno, name);
+                corto_throw("%s: %s", name, strerror(errno));
                 goto error;
             }
             ctx->program = program;
@@ -709,7 +687,7 @@ int16_t corto_dir_iter(
 
     return 0;
 error:
-    corto_seterr("dir_iter: %s", corto_lasterr());
+    corto_throw("dir_iter failed");
     return -1;
 }
 
@@ -742,7 +720,7 @@ corto_dirstack corto_dirstack_push(
 
     return stack;
 error:
-    corto_seterr("dirstack_push: %s", corto_lasterr());
+    corto_throw("dirstack_push failed");
     return NULL;
 }
 
@@ -757,7 +735,7 @@ int16_t corto_dirstack_pop(
 
     return 0;
 error:
-    corto_seterr("dirstack_pop: %s", corto_lasterr());
+    corto_throw("dirstack_pop failed");
     return -1;
 }
 
@@ -782,7 +760,7 @@ time_t corto_lastmodified(
     struct stat attr;
 
     if (stat(name, &attr) < 0) {
-        corto_seterr("failed to stat '%s' (%s)", name, strerror(errno));
+        corto_throw("failed to stat '%s' (%s)", name, strerror(errno));
         goto error;
     }
 

@@ -27,7 +27,7 @@ void printError(
     int e, 
     const char *ctx) 
 {
-    corto_seterr("%s '%s'", strerror(e), ctx);
+    corto_throw("%s '%s'", strerror(e), ctx);
 }
 
 FILE* corto_file_open(
@@ -68,7 +68,7 @@ char* corto_file_load(
     /* Open file for reading */
     file = fopen(filename, "r");
     if (!file) {
-        corto_seterr("%s (%s)", strerror(errno), filename);
+        corto_throw("%s (%s)", strerror(errno), filename);
         goto error;
     }
 
@@ -96,7 +96,7 @@ error:
     return NULL;
 }
 
-bool corto_file_test(
+int16_t corto_file_test(
     const char* filefmt, 
     ...) 
 {
@@ -113,7 +113,8 @@ bool corto_file_test(
         if (exists) {
             fclose(exists);
         } else if ((errno != ENOENT) && (errno != ENOTDIR)) {
-            corto_seterr("%s: %s", file, strerror(errno));
+            corto_throw("%s: %s", file, strerror(errno));
+            return -1;
         } else {
             errno = 0;
         }

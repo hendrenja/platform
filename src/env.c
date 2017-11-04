@@ -65,7 +65,7 @@ static int corto_venvparseFlush(char* var, char** varptrptr, char** bptrptr, cha
     **varptrptr = '\0';
     val = corto_getenv(var);
     if (!val) {
-        corto_seterr("environment variable '%s' is not set", var);
+        corto_throw("environment variable '%s' is not set", var);
         goto error;
     }
     len = strlen(val);
@@ -103,7 +103,7 @@ char* corto_venvparse(const char* input, va_list arglist) {
         } else if (ch == '~') {
             char *val = corto_getenv("HOME");
             if (!val) {
-                corto_seterr("$HOME environment variable (~) not found in string '%s'", str);
+                corto_throw("$HOME environment variable (~) not found in string '%s'", str);
                 goto error;
             }
             int len = strlen(val);

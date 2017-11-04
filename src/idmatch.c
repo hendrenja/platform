@@ -151,7 +151,7 @@ static int corto_idmatchValidate(corto_idmatch_program data) {
 
     return 0;
 error:
-    corto_seterr("unexpected '%s' after '%s'",
+    corto_throw("unexpected '%s' after '%s'",
         corto_idmatchTokenStr(t),
         corto_idmatchTokenStr(tprev));
     return -1;
@@ -210,7 +210,7 @@ int16_t corto_idmatchParseIntern(
         switch(ch) {
         case '/':
             if (!allowScopes) {
-                corto_seterr("scope operators not allowed");
+                corto_throw("scope operators not allowed");
                 goto error;
             }
             if (ptr[1] == '/') {
@@ -224,7 +224,7 @@ int16_t corto_idmatchParseIntern(
             break;
         case ':':
             if (!allowScopes) {
-                corto_seterr("scope operators not allowed");
+                corto_throw("scope operators not allowed");
                 goto error;
             }
             if (ptr[1] == ':') {
@@ -232,7 +232,7 @@ int16_t corto_idmatchParseIntern(
                 *ptr = '\0';
                 ptr++;
             } else {
-                corto_seterr("invalid usage of ':'");
+                corto_throw("invalid usage of ':'");
                 goto error;
             }
             break;
@@ -250,7 +250,7 @@ int16_t corto_idmatchParseIntern(
             break;
         case ',':
             if (!allowSeparators) {
-                corto_seterr("scope operators not allowed");
+                corto_throw("scope operators not allowed");
                 goto error;
             }
             data->ops[op].token = CORTO_MATCHER_TOKEN_SEPARATOR;
@@ -258,7 +258,7 @@ int16_t corto_idmatchParseIntern(
             break;
         case '.':
             if (!allowScopes) {
-                corto_seterr("scope operators not allowed");
+                corto_throw("scope operators not allowed");
                 goto error;
             }
             if (ptr[1] == '.') {
@@ -295,7 +295,7 @@ int16_t corto_idmatchParseIntern(
 
             ptr--; /* Go back one character to adjust for lookahead of one */
             if (!(ptr - start)) {
-                corto_seterr("invalid character '%c' (expr = '%s')", ch, expr);
+                corto_throw("invalid character '%c' (expr = '%s')", ch, expr);
                 goto error;
             }
             ptr--;
@@ -306,7 +306,7 @@ int16_t corto_idmatchParseIntern(
             data->ops[op].start = start;
         }
         if (++op == (CORTO_MATCHER_MAX_OP - 2)) {
-            corto_seterr("expression contains too many tokens");
+            corto_throw("expression contains too many tokens");
             goto error;
         }
     }
@@ -345,7 +345,7 @@ corto_idmatch_program corto_idmatch_compile(
     corto_debug("match: compile expression '%s'", expr);
     if (corto_idmatchParseIntern(result, expr, allowScopes, allowSeparators) || !result->size) {
         if (!result->size) {
-            corto_seterr("expression '%s' resulted in empty program", expr);
+            corto_throw("expression '%s' resulted in empty program", expr);
         }
         corto_dealloc(result->tokens);
         corto_dealloc(result);

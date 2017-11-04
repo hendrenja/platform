@@ -29,8 +29,7 @@ void base_init(char *appName) {
     }
 
     if (corto_log_init()) {
-        corto_critical("failed to initialize logging framework: %s", 
-            corto_lasterr());
+        corto_critical("failed to initialize logging framework");
     }
 
     char *verbosity = corto_getenv("CORTO_VERBOSITY");

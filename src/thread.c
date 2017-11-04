@@ -82,7 +82,7 @@ static int32_t corto_threadTlsCount = -1;
 
 int corto_tls_new(corto_tls* key, void(*destructor)(void*)){
     if (pthread_key_create(key, destructor)) {
-        corto_seterr("corto_tls_new failed.");
+        corto_throw("corto_tls_new failed.");
         goto error;
     }
 
@@ -117,7 +117,7 @@ void corto_tls_free(void) {
 int corto_mutex_new(struct corto_mutex_s *m) {
     int result;
     if ((result = pthread_mutex_init (&m->mutex, NULL))) {
-        corto_seterr("mutexNew failed: %s", strerror(result));
+        corto_throw("mutexNew failed: %s", strerror(result));
     }
     return result;
 }
@@ -125,7 +125,7 @@ int corto_mutex_new(struct corto_mutex_s *m) {
 int corto_mutex_lock(corto_mutex mutex) {
     int result;
     if ((result = pthread_mutex_lock(&mutex->mutex))) {
-        corto_seterr("mutexLock failed: %s", strerror(result));
+        corto_throw("mutexLock failed: %s", strerror(result));
     }
     return result;
 }
@@ -137,7 +137,7 @@ int corto_mutex_unlock(corto_mutex mutex) {
 int corto_mutex_free(corto_mutex mutex) {
     int result;
     if ((result = pthread_mutex_destroy(&mutex->mutex))) {
-        corto_seterr("mutexFree failed: %s", strerror(result));
+        corto_throw("mutexFree failed: %s", strerror(result));
     }
     return result;
 }
@@ -145,7 +145,7 @@ int corto_mutex_free(corto_mutex mutex) {
 int corto_mutex_try(corto_mutex mutex) {
     int result;
     if ((result = pthread_mutex_trylock(&mutex->mutex))) {
-        corto_seterr("mutexTry failed: %s", strerror(result));
+        corto_throw("mutexTry failed: %s", strerror(result));
     }
     return result;
 }
@@ -184,7 +184,7 @@ int corto_mutex_lockTimed(corto_mutex mutex, struct timespec ts) {
 
     if ((result = pthread_mutex_timedlock(&mutex->mutex, &ts))) {
         if (result != ETIMEDOUT) {
-            corto_seterr("mutexTry failed: %s", strerror(result));
+            corto_throw("mutexTry failed: %s", strerror(result));
         }
     }
 
@@ -196,7 +196,7 @@ int corto_rwmutex_new(struct corto_rwmutex_s *m) {
     int result = 0;
 
     if ((result = pthread_rwlock_init(&m->mutex, NULL))) {
-        corto_seterr("rwmutexNew failed: %s", strerror(result));
+        corto_throw("rwmutexNew failed: %s", strerror(result));
     }
     return result;
 }
@@ -205,7 +205,7 @@ int corto_rwmutex_new(struct corto_rwmutex_s *m) {
 int corto_rwmutex_free(corto_rwmutex m) {
     int result = 0;
     if ((result = pthread_rwlock_destroy(&m->mutex))) {
-        corto_seterr("rwmutexFree failed: %s", strerror(result));
+        corto_throw("rwmutexFree failed: %s", strerror(result));
     }
     return result;
 }
@@ -214,7 +214,7 @@ int corto_rwmutex_free(corto_rwmutex m) {
 int corto_rwmutex_read(corto_rwmutex mutex) {
     int result = 0;
     if ((result = pthread_rwlock_rdlock(&mutex->mutex))) {
-        corto_seterr("rwmutexRead failed: %s", strerror(result));
+        corto_throw("rwmutexRead failed: %s", strerror(result));
     }
     return result;
 }
@@ -223,7 +223,7 @@ int corto_rwmutex_read(corto_rwmutex mutex) {
 int corto_rwmutex_write(corto_rwmutex mutex) {
     int result = 0;
     if ((result = pthread_rwlock_wrlock(&mutex->mutex))) {
-        corto_seterr("rwmutexWrite failed: %s", strerror(result));
+        corto_throw("rwmutexWrite failed: %s", strerror(result));
     }
     return result;
 }
@@ -232,7 +232,7 @@ int corto_rwmutex_write(corto_rwmutex mutex) {
 int corto_rwmutex_tryRead(corto_rwmutex mutex) {
     int result;
     if ((result = pthread_rwlock_tryrdlock(&mutex->mutex))) {
-        corto_seterr("rwmutexTryRead failed: %s", strerror(result));
+        corto_throw("rwmutexTryRead failed: %s", strerror(result));
     }
     return result;
 }
@@ -241,7 +241,7 @@ int corto_rwmutex_tryRead(corto_rwmutex mutex) {
 int corto_rwmutex_tryWrite(corto_rwmutex mutex) {
     int result;
     if ((result = pthread_rwlock_trywrlock(&mutex->mutex))) {
-        corto_seterr("rwmutexTryWrite failed: %s", strerror(result));
+        corto_throw("rwmutexTryWrite failed: %s", strerror(result));
     }
     return result;
 }
@@ -250,7 +250,7 @@ int corto_rwmutex_tryWrite(corto_rwmutex mutex) {
 int corto_rwmutex_unlock(corto_rwmutex mutex) {
     int result;
     if ((result = pthread_rwlock_unlock(&mutex->mutex))) {
-        corto_seterr("rwmutexUnlock failed: %s", strerror(result));
+        corto_throw("rwmutexUnlock failed: %s", strerror(result));
     }
     return result;
 }

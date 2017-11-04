@@ -27,7 +27,7 @@
  * used by languages/frameworks that do and do not support native exception handling.
  *
  * Usage of the framework is as follows:
- * - Nested- and library functions use corto_seterr and corto_lasterr to log errors.
+ * - Nested- and library functions use corto_throw and corto_lasterr to log errors.
  *   This will store error messages in internal, thread-specific buffers until
  *   they are logged to the console by corto_error.
  *
@@ -36,11 +36,11 @@
  *   forward message to any registered handlers (always). Top level functions
  *   should use corto_lasterr when an error is caused by a nested call.
  *
- * When corto_seterr is used, and corto_error is called without using corto_lasterr
+ * When corto_throw is used, and corto_error is called without using corto_lasterr
  * the framework will report a warning to the console that an error has been
  * silenced. This protects users from accidentally missing error information.
  * When an application calls corto_stop and corto_lasterr has not been called 
- * after calling corto_seterr, the message is also logged to the console.
+ * after calling corto_throw, the message is also logged to the console.
  *
  * The corto_info function should only be used by application-level functions
  * (not by functions in a library).
@@ -398,44 +398,49 @@ void corto_criticalv(
 
 
 
-/* -- Error propagation -- */
+/* -- Exception handling -- */
 
 /** Propagate error to calling function upon failure.
  * This error must always be called when a function fails. When the function
  * fails because it in turn called a function that failed, the function may
- * choose to not call corto_seterr, but rely on the error propagated by the
+ * choose to not call corto_throw, but rely on the error propagated by the
  * failed function. It is good practice however to enrich errors with additional
  * context wherever possible.
  *
  * @param fmt printf-style format string.
  */
 CORTO_EXPORT 
-void _corto_seterr(
+void _corto_throw(
     char const *file,
     unsigned int line,
     char const *function,
     char *fmt, 
     ...);
 
-/* As corto_seterr, but with va_list parameter. */
+/* As corto_throw, but with va_list parameter. */
 CORTO_EXPORT 
-void corto_seterrv(
+void corto_throwv(
     char const *file,
     unsigned int line,
     char const *function,
     char *fmt, 
     va_list args);
 
-/** Retrieve last propagated error. */
-CORTO_EXPORT 
-char* corto_lasterr(void);
+/** Add details to an exception */
+CORTO_EXPORT
+void corto_throw_detail(
+    const char *fmt,
+    ...);
 
-/** Returns non-zero value if last error has been viewed. */
-CORTO_EXPORT int corto_lasterrViewed(void);
-
-/** Returns if last error has been set (does not affect viewed flag) */
+/** Catch an exception.
+ */
 CORTO_EXPORT 
-bool corto_lasterr_isSet(void);
+void corto_catch(void);
+
+/** Raise an exception.
+ */
+CORTO_EXPORT 
+void corto_raise(void);
 
 /** Propagate information to calling function.
  * This function is useful when a function wants to propagate a message that
@@ -448,8 +453,6 @@ CORTO_EXPORT void corto_setinfo(char *fmt, ...);
 CORTO_EXPORT 
 char* corto_lastinfo(void);
 
-
-
 /* -- Print stacktraces -- */
 
 /** Print current stacktrace to a file.
@@ -461,11 +464,14 @@ void corto_backtrace(
     FILE* f);
 
 
+/* Stub */
+CORTO_EXPORT
+char *corto_lasterr();
 
 /* -- Helper macro's -- */
 
 #define corto_critical(...) _corto_critical(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
-#define corto_seterr(...) _corto_seterr(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_throw(...) _corto_throw(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error(...) _corto_error(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning(...) _corto_warning(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);

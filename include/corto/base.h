@@ -156,8 +156,11 @@ extern "C" {
 /* Maximum number of simultaneous benchmarks */
 #define CORTO_MAX_BENCHMARK (64)
 
-/* Maximum number of components in logmsg, like: "comp1: comp2: comp3: msg" */
+/* Maximum number of categories in logmsg, like: "comp1: comp2: comp3: msg" */
 #define CORTO_MAX_LOG_CATEGORIES (16)
+
+/* Maximum number of code frames in logmsg */
+#define CORTO_MAX_LOG_CODEFRAMES (16)
 
 /* #define CORTO_WALK_TRACING */
 #define CORTO_IC_TRACING

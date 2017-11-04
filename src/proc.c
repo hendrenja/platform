@@ -101,7 +101,7 @@ int corto_proc_wait(corto_proc pid, int8_t *rc) {
     int result = 0;
 
     if (waitpid(pid, &status, 0) != pid) {
-        corto_seterr("wait for %d failed: %s", pid, strerror(errno));
+        corto_throw("wait for %d failed: %s", pid, strerror(errno));
         return -1;
     }
 

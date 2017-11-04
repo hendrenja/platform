@@ -66,10 +66,10 @@ int16_t corto_file_iter(
 /** Test if a file exists.
  * 
  * @param filefmt A printf-style format specifier that describes the file to test.
- * @return true if file exists, otherwise false.
+ * @return 1 if file exists, 0 if doesn't exist, -1 if an error occurred.
  */
 CORTO_EXPORT
-bool corto_file_test(
+int16_t corto_file_test(
     const char* filefmt, 
     ...);
 
