@@ -101,7 +101,9 @@ corto_log_verbosity corto_log_verbosityGet(void);
  * The following characters can be used for specifying the format:
  * -v Verbosity
  * -a Application name
+ * -A Process id
  * -c Category
+ * -C Category (tree view)
  * -m Formatted message
  * -t numerical representation of time (sec, nanosec)
  * -T user-friendly representation of time (1985-4-11 20:00:00)

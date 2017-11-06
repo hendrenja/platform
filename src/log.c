@@ -540,6 +540,24 @@ int corto_logprint_function(
         return 0;
     }
 }
+  
+static 
+int corto_logprint_proc(
+    corto_buffer *buf)
+{
+    char *colors[] = {
+        CORTO_GREEN, 
+        CORTO_YELLOW,
+        CORTO_BLUE,  
+        CORTO_MAGENTA
+        CORTO_CYAN,  
+        CORTO_WHITE, 
+        CORTO_GREY,  
+    };
+    corto_proc id = corto_proc();
+    corto_buffer_append(buf, "%s%u%s", colors[id % 6], id, CORTO_NORMAL);
+    return 1;
+}
 
 static 
 void corto_logprint(
@@ -550,13 +568,13 @@ void corto_logprint(
     uint64_t line,
     char const *function,
     char *msg, 
-    char *categoryStr) 
+    bool breakAtCategory) 
 {
     size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT, *cur;
     char *fmtptr, ch;
     corto_log_tlsData *data = corto_getThreadData();
-    bool modified = false;
+    bool modified = false, stop = false;
 
     bool 
         prevSeparatedBySpace = TRUE, 
@@ -581,61 +599,71 @@ void corto_logprint(
             case 'v': corto_logprint_kind(cur, kind); break;
             case 'k': corto_logprint_kind(cur, kind); break; /* Deprecated */
             case 'c':
+            case 'C':
+                if (breakAtCategory) {
+                    stop = true;
+                    break;
+                }
+
                 if (kind == CORTO_THROW) {
                     ret = 0;
                     break;
                 }
-                if (categoryStr) {
-                    corto_buffer_append(cur, categoryStr);
-                } else {
-                    if (!corto_log_shouldEmbedCategories) {
-                        int i = 0; 
-                        while (data->categories[i]) {
-                            char *empty = "", *indent = empty;
-                            if (i > 1) {
-                                indent = corto_log_categoryIndent(data->categories, i - 1);
-                            }
 
-                            if (!data->frames[i].printed) {
-                                if (i) {
-                                    fprintf(
-                                        stderr, 
-                                        "%s%s├>%s %s%s%s\n", 
-                                        indent, 
-                                        CORTO_GREY,
-                                        CORTO_NORMAL,
-                                        CORTO_MAGENTA, 
-                                        data->categories[i], 
-                                        CORTO_NORMAL);
-                                } else {
-                                    fprintf(
-                                        stderr, 
-                                        "%s%s%s\n", 
-                                        CORTO_MAGENTA, 
-                                        data->categories[i], 
-                                        CORTO_NORMAL);
-                                }
-                                data->frames[i].printed = true;
-                            }
-                            if (indent != empty) free(indent);
-                            i ++;
-                        }
-                        if (i) data->frames[i - 1].count ++;
+                if (!corto_log_shouldEmbedCategories) {
+                    int i = 0; 
 
-                        if (!modified) {
-                            char *indent = corto_log_categoryIndent(data->categories, 0);
-                            corto_buffer_appendstr(cur, indent);
-                            free(indent);
+                    while (data->categories[i]) {
+                        char *empty = "", *indent = empty;
+
+                        if (i > 1) {
+                            indent = corto_log_categoryIndent(data->categories, i - 1);
                         }
+
+                        if (!data->frames[i].printed) {
+                            if (i) {
+                                corto_logprint(
+                                    f, kind, categories, file, line, function, NULL, TRUE);                    
+                                fprintf(
+                                    stderr, 
+                                    "%s%s├>%s %s%s%s\n", 
+                                    indent, 
+                                    CORTO_GREY,
+                                    CORTO_NORMAL,
+                                    CORTO_MAGENTA, 
+                                    data->categories[i], 
+                                    CORTO_NORMAL);
+                            } else {
+                                corto_logprint(
+                                    f, kind, categories, file, line, function, NULL, TRUE);                                                    
+                                fprintf(
+                                    stderr, 
+                                    "%s%s%s\n", 
+                                    CORTO_MAGENTA, 
+                                    data->categories[i], 
+                                    CORTO_NORMAL);
+                            }
+                            data->frames[i].printed = true;
+                        }
+                        if (indent != empty) free(indent);
+                        i ++;
                     }
-                    ret = corto_logprint_categories(cur, categories);                   
+                    if (i) data->frames[i - 1].count ++;
+
+                    if (!modified) {
+                        char *indent = corto_log_categoryIndent(data->categories, 0);
+                        corto_buffer_appendstr(cur, indent);
+                        free(indent);
+                    }
                 }
+                ret = corto_logprint_categories(cur, categories);
                 break;
             case 'f': ret = corto_logprint_file(cur, file); break;
             case 'l': ret = corto_logprint_line(cur, line); break;
             case 'r': ret = corto_logprint_function(cur, function); break;
             case 'm': ret = corto_logprint_msg(cur, msg); break;
             case 'a': corto_buffer_append(cur, "%s%s%s", CORTO_CYAN, corto_log_appName, CORTO_NORMAL); break;
+            case 'A': ret = corto_logprint_proc(cur); break;
             case 'V': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { corto_logprint_kind(cur, kind); } else { ret = 0; } break;
             case 'F': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_file(cur, file); } else { ret = 0; } break;
             case 'L': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_line(cur, line); } else { ret = 0; } break;
@@ -643,6 +671,10 @@ void corto_logprint(
             default:
                 corto_buffer_appendstr(cur, "%");
                 corto_buffer_appendstrn(cur, &fmtptr[1], 1);
+                break;
+            }
+
+            if (stop) {
                 break;
             }
 
@@ -688,14 +720,20 @@ void corto_logprint(
 
     char *str = corto_buffer_str(&buf);
 
-    n = strlen(str) + 1;
-    if (n < 80) {
-        n = 80 - n;
-    } else {
-        n = 0;
-    }
+    if (str) {
+        n = strlen(str) + 1;
+        if (n < 80) {
+            n = 80 - n;
+        } else {
+            n = 0;
+        }
 
-    fprintf(f, "%s\n", str);
+        if (breakAtCategory) {
+            fprintf(f, "%s", str);
+        } else {
+            fprintf(f, "%s\n", str);   
+        }
+    }
 
     corto_dealloc(str);
 }
@@ -957,31 +995,27 @@ void corto_log_pop(void) {
         if (frame->category) free(frame->category);
         frame->sp = 0;
 
-        if (data->sp) {
-            data->frames[data->sp - 1].count += data->frames[data->sp].count;
-        }
+        data->frames[data->sp - 1].count += data->frames[data->sp].count;
+        data->categories[data->sp - 1] = NULL;
 
         /* If categories are not embedded in log message, they are displayed in
          * a hierarchical view */
         if (!corto_log_shouldEmbedCategories && !data->exceptionCount) {
+
             /* Only print close if messages were logged for category */
             if (frame->printed) {
-                if (data->sp) {
-                    char *indent = corto_log_categoryIndent(data->categories, 0);
-                    if (data->frames[data->sp].count) {
-                        fprintf(
-                            stderr, 
-                            "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);
-                    }
-                    free(indent);
-                } else {
-                    fprintf(stderr, "%s+%s\n", CORTO_GREY, CORTO_NORMAL);
-                }
+                char *indent = corto_log_categoryIndent(data->categories, 0);
+                /* Print everything that preceeds the category */
+                corto_logprint(
+                    stderr, CORTO_INFO, data->categories, NULL, 0, NULL, NULL, TRUE);                        
+                fprintf(
+                    stderr, 
+                    "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);
+                free(indent);
             }
         }
 
         data->sp --;
-        data->categories[data->sp] = NULL;
     } else {
         corto_critical("corto_log_pop called more times than corto_log_push");
     } 
@@ -1040,6 +1074,17 @@ void corto_log_fmt(
     corto_log_fmt_application = corto_log_fmt_current;
 
     corto_setenv("CORTO_LOGFMT", "%s", corto_log_fmt_current);
+
+    char *ptr, ch;
+    for (ptr = fmt; (ch = *ptr); ptr++) {
+        if (ch == '%') {
+            if (ptr[1] == 'C') {
+                corto_log_embedCategories(false);
+            } else if (ptr[1] == 'c') {
+                corto_log_embedCategories(true);
+            }
+        }
+    }
 }
 
 corto_log_verbosity corto_logv(
@@ -1077,7 +1122,7 @@ corto_log_verbosity corto_logv(
         msgBody = corto_log_parseComponents(categories, msg);
 
         if (kind >= CORTO_LOG_LEVEL) {
-            corto_logprint(f, kind, categories, file, line, function, msgBody, NULL);
+            corto_logprint(f, kind, categories, file, line, function, msgBody, FALSE);
         }
 
         if (corto_log_handlers) {
@@ -1225,7 +1270,7 @@ void corto_throwv(
             corto_throw("error raised while shutting down");
             corto_raise();
         } else {
-            corto_logprint(stderr, CORTO_DEBUG, NULL, file, line, function, err, NULL);
+            corto_logprint(stderr, CORTO_DEBUG, NULL, file, line, function, err, FALSE);
         }
     }
 
