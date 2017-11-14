@@ -22,8 +22,8 @@
 #include <corto/base.h>
 #include <corto/jsw_rbtree.h>
 
-corto_rb corto_rb_new(corto_equals_cb compare) {
-    return (corto_rb)jsw_rbnew(NULL, compare);
+corto_rb corto_rb_new(corto_equals_cb compare, void *ctx) {
+    return (corto_rb)jsw_rbnew(ctx, compare);
 }
 
 void corto_rb_free(corto_rb tree) {

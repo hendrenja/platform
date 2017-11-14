@@ -482,6 +482,7 @@ char *corto_lasterr();
 #define corto_error(...) _corto_error(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning(...) _corto_warning(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);
+#define corto_throw_fl(f, l, ...) _corto_throw(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error_fl(f, l, ...) _corto_error(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #ifndef NDEBUG

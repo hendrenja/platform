@@ -945,10 +945,6 @@ void corto_log_setError(
             frame->sp ++;
         }
     }
-
-    if (error && corto_log_verbosityGet() == CORTO_DEBUG) {
-        data->backtrace = corto_backtraceString();
-    }
 }
 
 int _corto_log_push(

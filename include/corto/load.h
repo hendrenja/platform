@@ -29,7 +29,7 @@ extern "C" {
 typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData);
 
 /** Load a resource.
- * The corto_load function provides a single interface to loading files or 
+ * The corto_load function provides a single interface to loading files or
  * packages into corto. The function accepts any filetype known to corto (types
  * are registered as packages in the driver/ext scope).
  *
@@ -52,7 +52,7 @@ typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData)
  * but can also involve loading an XML file or executing a corto script,
  * depending on how the resource type is implemented.
  *
- * Resource types are regular packages located in the `driver/ext` scope. They 
+ * Resource types are regular packages located in the `driver/ext` scope. They
  * need to call `corto_load_register` in their `cortomain` function to register
  * the resource type handler, which determines how a resource is loaded.
  *
@@ -62,10 +62,10 @@ typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData)
  * @return Zero if success, nonzero if failed.
  * @see corto_locate corto_load_register
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_load(
-    char *identifier, 
-    int argc, 
+    char *identifier,
+    int argc,
     char *argv[]);
 
 /** Execute a resource.
@@ -87,6 +87,7 @@ int corto_run(
 typedef enum corto_load_locateKind {
     CORTO_LOCATION_ENV,
     CORTO_LOCATION_LIB,
+    CORTO_LOCATION_ETC,
     CORTO_LOCATION_LIBPATH,
     CORTO_LOCATION_INCLUDE,
     CORTO_LOCATION_NAME,
@@ -96,7 +97,7 @@ typedef enum corto_load_locateKind {
 /** Locate a resource.
  * The `corto_locate` function can be used to locate a package on disk, and to
  * obtain information about the various locations associated with a package.
- * 
+ *
  * The function accepts a logical package identifier. Local package identifiers
  * are the same across platforms and are equal to the identifier of the package
  * object once loaded into the corto object store. A package identifier is
@@ -111,30 +112,30 @@ typedef enum corto_load_locateKind {
  *
  * A package is only located once. After the first lookup, the result is cached.
  * That means that if a newer version of a package is installed while applications
- * are running, these applications will have to be restarted to see the new 
+ * are running, these applications will have to be restarted to see the new
  * package if it is in a different location.
  *
  * If the package has already been loaded by `corto_load` or equivalent function,
  * the function returns a pointer to the library object through the `dl_out`
  * parameter.
  *
- * Through the `kind` parameter, the `corto_locate` function can return 
- * information about the environment the package is installed in 
+ * Through the `kind` parameter, the `corto_locate` function can return
+ * information about the environment the package is installed in
  * (`CORTO_LOCATE_ENV`), the full library path (`CORTO_LOCATE_LIB`), the library
  * path without filename (`CORTO_LOCATE_LIBPATH`), the include path for the
- * package (`CORTO_LOCATE_INCLUDE`), the project name of the package 
- * (`CORTO_LOCATE_NAME`) and the logical name of the package 
+ * package (`CORTO_LOCATE_INCLUDE`), the project name of the package
+ * (`CORTO_LOCATE_NAME`) and the logical name of the package
  * (`CORTO_LOCATE_FULLNAME`).
  *
  * @param package A logical package name.
  * @param dl_out Will be set to library object, if already loaded.
  * @param kind Specify which information should be obtained from package.
- * @return The requested information. 
+ * @return The requested information.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 char* corto_locate(
-    char *package, 
-    corto_dl *dl_out, 
+    char *package,
+    corto_dl *dl_out,
     corto_load_locateKind kind);
 
 /** Load a resource from a library.
@@ -148,7 +149,7 @@ char* corto_locate(
  * `dl_out` parameter to the library object, if found. This facilitates doing
  * efficient repeated lookups on the same package, while also allowing for doing
  * lookups on non-package libraries (pass NULL to `package` and specify a
- * library for `dl_out`). 
+ * library for `dl_out`).
  *
  * The symbol must point to a global symbol. Different platforms have different
  * rules for which symbols are made visible. If using a corto package, you can
@@ -158,27 +159,27 @@ char* corto_locate(
  * @param dl_out Cached pointer to library to avoid doing repeated `corto_lookup`'s
  * @param symbol Name of the symbol to lookup.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_load_sym(
-    char *package, 
-    corto_dl *dl_out, 
+    char *package,
+    corto_dl *dl_out,
     char *symbol);
 
 /** Same as corto_load_sym, but for procedures.
- * 
+ *
  * @see corto_load_sym
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void (*corto_load_proc(
-    char *package, 
-    corto_dl *dl_out, 
+    char *package,
+    corto_dl *dl_out,
     char *symbol))(void);
 
 /** Register a load action.
  * The `corto_load_register` function registers a load action that needs to be
  * invoked when loading a resource of a specified extension.
- * 
- * To load a file of a specified extension, corto will first look in the 
+ *
+ * To load a file of a specified extension, corto will first look in the
  * `driver/ext` scope if a package with the extension name can be found. If it
  * has found one, it will load the package library as an ordinary package, which
  * means the `cortomain` will be invoked.
@@ -188,7 +189,7 @@ void (*corto_load_proc(
  * in the `driver/ext` scope did not register the extension after running the
  * `cortomain` function, an error will be thrown.
  *
- * The load action specifies how to load a file of a specific extension. For 
+ * The load action specifies how to load a file of a specific extension. For
  * example, a library will be loaded with `dlopen` while an XML file will be
  * loaded as text file, and is then parsed with an XML parser.
  *
@@ -197,18 +198,18 @@ void (*corto_load_proc(
  * @param userData Data passed to the callback.
  * @return Zero if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_load_register(
-    char *ext, 
-    corto_load_cb action, 
+    char *ext,
+    corto_load_cb action,
     void* userData);
 
 /* Internal function for initializing paths in loader */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_load_init(
-    const char *target, 
-    const char *home, 
-    const char *global, 
+    const char *target,
+    const char *home,
+    const char *global,
     const char *version,
     const char *library);
 

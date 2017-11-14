@@ -58,11 +58,11 @@ struct corto_fileHandler {
 
 /* Initialize paths necessary for loader */
 void corto_load_init(
-    const char *target, 
-    const char *home, 
-    const char *global, 
-    const char *v, 
-    const char *library) 
+    const char *target,
+    const char *home,
+    const char *global,
+    const char *v,
+    const char *library)
 {
     targetEnv = target;
     homeEnv = home;
@@ -72,34 +72,34 @@ void corto_load_init(
 
     /* Target path - where packages are being built */
     targetPath = corto_envparse(
-        "$CORTO_TARGET/lib/corto/%s", 
+        "$CORTO_TARGET/lib/corto/%s",
         version);
 
     /* Home path - where corto is located */
     homePath = corto_envparse(
-        "$CORTO_HOME/lib/corto/%s", 
+        "$CORTO_HOME/lib/corto/%s",
         version);
 
     /* Global path - where the global package repository is (all users) */
     globalPath = corto_envparse(
-        "/usr/local/lib/corto/%s", 
+        "/usr/local/lib/corto/%s",
         version);
 
 
     /* Precompute base with parameter for lib, etc, include */
     targetBase = corto_envparse(
-        "$CORTO_TARGET/%%s/corto/%s", 
+        "$CORTO_TARGET/%%s/corto/%s",
         version);
 
     /* Home path - where corto is located */
     homeBase = corto_envparse(
-        "$CORTO_HOME/%%s/corto/%s", 
+        "$CORTO_HOME/%%s/corto/%s",
         version);
 
     /* Global path - where the global package repository is (all users) */
     globalBase = corto_envparse(
-        "/usr/local/%%s/corto/%s", 
-        version);    
+        "/usr/local/%%s/corto/%s",
+        version);
 }
 
 static char* corto_ptr_castToPath(char* lib, corto_id path) {
@@ -371,14 +371,14 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
     }
 
     /* Add library to libraries list */
-    corto_mutex_lock (&corto_load_lock);    
+    corto_mutex_lock (&corto_load_lock);
     if (!libraries || !corto_ll_hasObject(libraries, dl)) {
         if (!libraries) {
             libraries = corto_ll_new();
         }
 
         corto_ll_insert(libraries, dl);
-        corto_debug("loader: loaded '%s'", fileName);        
+        corto_debug("loader: loaded '%s'", fileName);
     }
     corto_mutex_unlock (&corto_load_lock);
 
@@ -493,13 +493,13 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
                     ext);
                 goto error;
             }
-            result = -1;            
+            result = -1;
         }
         corto_mutex_lock(&corto_load_lock);
         h = corto_lookupExt(ext);
         if (!h) {
             corto_throw(
-                "package 'driver/ext/%s' loaded but extension is not registered", 
+                "package 'driver/ext/%s' loaded but extension is not registered",
                 ext);
             corto_mutex_unlock(&corto_load_lock);
             goto error;
@@ -523,7 +523,7 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
         corto_throw("'%s' is not a loadable file", lib->name);
         result = -1;
     }
-    
+
     corto_mutex_lock(&corto_load_lock);
 
     lib->loading = 0;
@@ -610,7 +610,7 @@ static char* corto_locatePackageIntern(
     /* Look for local packages first */
     if (!(targetLib = corto_asprintf("%s/%s", targetPath, lib))) {
         goto error;
-    }    
+    }
     if ((ret = corto_file_test(targetLib)) == 1) {
         corto_debug("loader: locate '%s': found '%s'", lib, targetLib);
         if (!isLibrary || corto_checkLibrary(targetLib, &targetBuild, &dl)) {
@@ -771,7 +771,7 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
     if (loaded) {
         result = loaded->filename ? corto_strdup(loaded->filename) : NULL;
         base = loaded->base;
-    }    
+    }
 #endif
 
     if (!result) {
@@ -791,6 +791,7 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
     case CORTO_LOCATION_ENV:
     case CORTO_LOCATION_LIBPATH:
     case CORTO_LOCATION_INCLUDE:
+    case CORTO_LOCATION_ETC:
         corto_dealloc(result);
         result = corto_strdup("");
         break;
@@ -853,6 +854,13 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
             include = corto_asprintf(base, "include");
             result = corto_asprintf("%s/%s", include, package);
             corto_dealloc(include);
+            break;
+        }
+        case CORTO_LOCATION_ETC: {
+            char* etc;
+            etc = corto_asprintf(base, "etc");
+            result = corto_asprintf("%s/%s", etc, package);
+            corto_dealloc(etc);
             break;
         }
         case CORTO_LOCATION_NAME:

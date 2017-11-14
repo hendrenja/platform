@@ -28,7 +28,8 @@ extern "C" {
 
 CORTO_EXPORT 
 corto_rb corto_rb_new(
-    corto_equals_cb compare);
+    corto_equals_cb compare,
+    void *ctx);
 
 CORTO_EXPORT 
 void corto_rb_free(
