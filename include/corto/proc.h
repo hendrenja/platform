@@ -54,9 +54,9 @@ typedef enum corto_procsignal {
  * @param argv Null-terminated array of strings.
  * @return Handle to process.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_proc corto_proc_run(
-    const char* exec, 
+    const char* exec,
     char *argv[]);
 
 /** Run a process, redirect stdin, stdout and stderr.
@@ -70,12 +70,12 @@ corto_proc corto_proc_run(
  * @param err FIle to redirect stderr to.
  * @return Handle to process.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_proc corto_proc_runRedirect(
-    const char* exec, 
-    char *argv[], 
-    FILE *in, 
-    FILE *out, 
+    const char* exec,
+    char *argv[],
+    FILE *in,
+    FILE *out,
     FILE *err);
 
 /** Send signal to a process.
@@ -84,9 +84,9 @@ corto_proc corto_proc_runRedirect(
  * @param sig Signal to send to process.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_proc_kill(
-    corto_proc pid, 
+    corto_proc pid,
     corto_procsignal sig);
 
 /** Wait for process to exit (blocking).
@@ -95,9 +95,9 @@ int corto_proc_kill(
  * @param rc Value returned by process.
  * @return 0 if success, -1 if function failed, otherwise the signal raised by the process during exit.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_proc_wait(
-    corto_proc pid, 
+    corto_proc pid,
     int8_t *rc);
 
 /** Check if process is still alive.
@@ -106,28 +106,28 @@ int corto_proc_wait(
  * @param rc Value returned by process.
  * @return 0 if still running, -1 if exitted normally, otherwise the signal raised by the process during exit.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_proc_check(
-    corto_proc pid, 
+    corto_proc pid,
     int8_t *rc);
 
 /** Run a process (blocking).
  * This function will block until the process exits.
  *
  * @param sig Signal to send to process.
- * @param rc Value returned by process. 
+ * @param rc Value returned by process.
  * @return 0 if success, -1 if function failed, otherwise the signal raised by the process during exit.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_proc_cmd(
-    char *cmd, 
+    char *cmd,
     int8_t *rc);
 
 /** Function that checks if process is being traced (experimental)
  *
  * @return non-zero if being traced, otherwise 0.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_beingTraced(void);
 
 /** Get pid of current process.
@@ -135,7 +135,7 @@ int corto_beingTraced(void);
  *
  * @return Process handle of current process.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_proc _corto_proc(void);
 
 /* Macro that allows using corto_proc as a function in addition to it being used

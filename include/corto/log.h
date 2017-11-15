@@ -39,7 +39,7 @@
  * When corto_throw is used, and corto_error is called without using corto_lasterr
  * the framework will report a warning to the console that an error has been
  * silenced. This protects users from accidentally missing error information.
- * When an application calls corto_stop and corto_lasterr has not been called 
+ * When an application calls corto_stop and corto_lasterr has not been called
  * after calling corto_throw, the message is also logged to the console.
  *
  * The corto_info function should only be used by application-level functions
@@ -79,7 +79,7 @@ typedef enum corto_log_verbosity {
  * to DEBUG, backtraces are automatically enabled.
  * @param verbosity Verbosity level.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_log_verbositySet(
     corto_log_verbosity verbosity);
 
@@ -87,7 +87,7 @@ void corto_log_verbositySet(
  * The verbosity level is the same for all threads.
  * @return The current verbosity level.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_log_verbosity corto_log_verbosityGet(void);
 
 
@@ -109,18 +109,19 @@ corto_log_verbosity corto_log_verbosityGet(void);
  * -T user-friendly representation of time (1985-4-11 20:00:00)
  * -f filename (use F for filename only in error messages)
  * -l line number (use L for linenumber only in error messages)
- * -r function (use R for function only in error messages) 
+ * -r function (use R for function only in error messages)
  *
  * The logging format is the same for all threads. This function will also set
  * the CORTO_LOGFMT environment variable.
  *
  * @param fmt Format used for logging.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_log_fmt(
     char *fmt);
 
-
+CORTO_EXPORT
+const char* corto_log_fmtGet(void);
 
 /* -- Pushing/popping logging categories -- */
 
@@ -129,7 +130,7 @@ void corto_log_fmt(
  * @param category Identifier of category.
  * @return Zero if success, non-zero if failed (max number of categories pushed).
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int _corto_log_push(
     char const *file,
     unsigned int line,
@@ -138,11 +139,11 @@ int _corto_log_push(
 
 /** Pop a category from the category stack.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_log_pop(void);
 
 /** Embed categories in logmessage or print them on push/pop
- * 
+ *
  */
 CORTO_EXPORT
 void corto_log_embedCategories(
@@ -152,14 +153,14 @@ void corto_log_embedCategories(
 
 typedef void* corto_log_handler;
 typedef void (*corto_log_handler_cb)(
-    corto_log_verbosity level, 
-    char *category[], 
-    char *msg, 
+    corto_log_verbosity level,
+    char *category[],
+    char *msg,
     void *ctx);
 
 /** Register callback that catches log messages.
  * The parameters of this function specify filters for incoming messages.
- * @param min_level Minimum verbosity level. Set to DEBUG for all messages. 
+ * @param min_level Minimum verbosity level. Set to DEBUG for all messages.
  * @param max_level Maximum verbosity level. Set to CRITICAL for all messages.
  * @param category_filter Filter on category using idmatch format. Set to "//" for all messages.
  * @param auth_token Specify authorization token when security is enabled.
@@ -167,9 +168,9 @@ typedef void (*corto_log_handler_cb)(
  * @param context Generic value that will be passed to handler.
  * @return Handler object that can be used to unregister callback.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_log_handler corto_log_handlerRegister(
-    corto_log_verbosity min_level, 
+    corto_log_verbosity min_level,
     corto_log_verbosity max_level,
     char* category_filter,
     char* auth_token,
@@ -177,18 +178,18 @@ corto_log_handler corto_log_handlerRegister(
     void *context);
 
 /** Unregister a handler.
- * 
+ *
  * @param handler The handler object.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_log_handlerUnregister(
     corto_log_handler handler);
 
 /** Check if any handlers are registered.
- * 
+ *
  * @return true if handlers are registered, otherwise false.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_log_handlersRegistered(void);
 
 
@@ -202,12 +203,12 @@ bool corto_log_handlersRegistered(void);
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_debug(
-    char const *file, 
+    char const *file,
     unsigned int line,
     char const *function,
-    const char* fmt, 
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_TRACE.
@@ -217,12 +218,12 @@ void _corto_debug(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_trace(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_INFO.
@@ -232,12 +233,12 @@ void _corto_trace(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_info(
-    char const *file, 
-    unsigned int line, 
-    char const *function,    
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_OK.
@@ -247,12 +248,12 @@ void _corto_info(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_ok(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_WARNING.
@@ -262,12 +263,12 @@ void _corto_ok(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_warning(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_ERROR.
@@ -277,12 +278,12 @@ void _corto_warning(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_error(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_ASSERT.
@@ -298,13 +299,13 @@ void _corto_error(
  * @param fmt A printf-style format string.
  * @param condition A condition to evaluate. When false, the process aborts.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_assert(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    unsigned int condition, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    unsigned int condition,
+    const char* fmt,
     ...);
 
 /** Log message with level CORTO_CRITICAL.
@@ -317,85 +318,85 @@ void _corto_assert(
  *
  * @param fmt A printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_critical(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     ...);
 
 /** As corto_debug, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_debugv(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     va_list args);
 
 /** As corto_trace, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_tracev(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char* fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char* fmt,
     va_list args);
 
 /** As corto_info, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_infov(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char *fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char *fmt,
     va_list args);
 
 /** As corto_ok, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_okv(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char *fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char *fmt,
     va_list args);
 
 /** As corto_warning, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_warningv(
-    char const *file, 
+    char const *file,
     unsigned int line,
-    char const *function,  
-    const char *fmt, 
+    char const *function,
+    const char *fmt,
     va_list args);
 
 /** As corto_error, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_errorv(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char *fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char *fmt,
     va_list args);
 
 /** As corto_assert, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_assertv(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    unsigned int condition, 
-    const char *fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    unsigned int condition,
+    const char *fmt,
     va_list args);
 
 /** As corto_critical, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_criticalv(
-    char const *file, 
-    unsigned int line, 
-    char const *function, 
-    const char *fmt, 
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char *fmt,
     va_list args);
 
 
@@ -411,21 +412,21 @@ void corto_criticalv(
  *
  * @param fmt printf-style format string.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void _corto_throw(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt, 
+    char *fmt,
     ...);
 
 /* As corto_throw, but with va_list parameter. */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_throwv(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt, 
+    char *fmt,
     va_list args);
 
 /** Add details to an exception */
@@ -436,17 +437,17 @@ void corto_throw_detail(
 
 /** Catch an exception.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_catch(void);
 
 /** Raise an exception.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_raise(void);
 
 /** Check for unraised exceptions (internal usage).
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void __corto_raise_check(void);
 
 /** Propagate information to calling function.
@@ -457,16 +458,16 @@ void __corto_raise_check(void);
 CORTO_EXPORT void corto_setinfo(char *fmt, ...);
 
 /** Retrieve last propagated information. */
-CORTO_EXPORT 
+CORTO_EXPORT
 char* corto_lastinfo(void);
 
 /* -- Print stacktraces -- */
 
 /** Print current stacktrace to a file.
- * 
+ *
  * @param f The file to which to print the stacktrace.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_backtrace(
     FILE* f);
 
@@ -474,6 +475,10 @@ void corto_backtrace(
 /* Stub */
 CORTO_EXPORT
 char *corto_lasterr();
+
+/* -- Utilities -- */
+CORTO_EXPORT
+void corto_print(char *str, ...);
 
 /* -- Helper macro's -- */
 
