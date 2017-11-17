@@ -81,10 +81,12 @@ static corto_threadTlsAdmin_t corto_threadTlsAdmin[CORTO_MAX_THREAD_KEY];
 static int32_t corto_threadTlsCount = -1;
 
 int corto_tls_new(corto_tls* key, void(*destructor)(void*)){
-    if (pthread_key_create(key, destructor)) {
-        corto_throw("corto_tls_new failed.");
-        goto error;
-    }
+    do {
+        if (pthread_key_create(key, destructor)) {
+            corto_throw("corto_tls_new failed.");
+            goto error;
+        }
+    } while (*key == 0);
 
     if (destructor) {
         int32_t slot = corto_ainc(&corto_threadTlsCount);
@@ -97,11 +99,17 @@ error:
     return -1;
 }
 
-int corto_tls_set(corto_tls key, void* value) {
+int _corto_tls_set(corto_tls key, const char *key_str, void* value) {
+    corto_assert(
+        key != 0,
+        "invalid (uninitialized?) key ('%s') specified for 'corto_tls_set'", key_str);
     return pthread_setspecific(key, value);
 }
 
-void* corto_tls_get(corto_tls key) {
+void* _corto_tls_get(corto_tls key, const char *key_str) {
+    corto_assert(
+        key != 0,
+        "invalid (uninitialized?) key ('%s') specified for 'corto_tls_set'", key_str);
     return pthread_getspecific(key);
 }
 

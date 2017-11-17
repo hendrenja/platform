@@ -41,9 +41,9 @@ typedef void* (*corto_thread_cb)(void*);
  * @param arg Argument to pass to thread function.
  * @return Handle to thread, 0 if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_thread corto_thread_new(
-    corto_thread_cb func, 
+    corto_thread_cb func,
     void* arg);
 
 /** Join a thread.
@@ -53,9 +53,9 @@ corto_thread corto_thread_new(
  * @param arg Pointer that will be set to return value of thread.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_thread_join(
-    corto_thread thread, 
+    corto_thread thread,
     void **arg);
 
 /** Detach a thread.
@@ -65,7 +65,7 @@ int corto_thread_join(
  * @param thread Handle to thread to detach.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_thread_detach(
     corto_thread thread);
 
@@ -75,9 +75,9 @@ int corto_thread_detach(
  * @param priority Priority to set.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_thread_setPriority(
-    corto_thread thread, 
+    corto_thread thread,
     int priority);
 
 /** Get priority of a thread.
@@ -85,7 +85,7 @@ int corto_thread_setPriority(
  * @param thread Handle to thread to detach.
  * @return Priority of thread.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_thread_getPriority(
     corto_thread thread);
 
@@ -93,7 +93,7 @@ int corto_thread_getPriority(
  *
  * @return handle to thread.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_thread corto_thread_self(void);
 
 
@@ -106,9 +106,9 @@ corto_thread corto_thread_self(void);
  * @param destructor Function that will be invoked when tls data is cleaned up.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_tls_new(
-    corto_tls* key_out, 
+    corto_tls* key_out,
     void(*destructor)(void*));
 
 /** Set thread specific data for tls key.
@@ -117,19 +117,25 @@ int corto_tls_new(
  * @param value Value to assign to tls storage.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
-int corto_tls_set(
-    corto_tls key, 
+CORTO_EXPORT
+int _corto_tls_set(
+    corto_tls key,
+    const char *key_str,
     void* value);
+
+#define corto_tls_set(key, value) _corto_tls_set(key, #key, value)
 
 /** Get thread specific data for tls key.
  *
  * @param key Key for which to get the tls data.
  * @return tls storage corresponding to key. NULL if not set.
  */
-CORTO_EXPORT 
-void* corto_tls_get(
-    corto_tls key);
+CORTO_EXPORT
+void* _corto_tls_get(
+    corto_tls key,
+    const char* key_str);
+
+#define corto_tls_get(key) _corto_tls_get(key, #key)
 
 /** Free tls data in main thread.
  * Sometimes thread libraries do not cleanup tls data automatically in the
@@ -138,7 +144,7 @@ void* corto_tls_get(
  *
  * The base_deinit function calls this function.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_tls_free(void);
 
 
@@ -152,7 +158,7 @@ typedef struct corto_mutex_s* corto_mutex;
  * @param mutex Pointer to uninitialized corto_mutex_s structure.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_new(
     struct corto_mutex_s *mutex);
 
@@ -161,7 +167,7 @@ int corto_mutex_new(
  * @param mutex Mutex to lock.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_lock(
     corto_mutex mutex);
 
@@ -170,7 +176,7 @@ int corto_mutex_lock(
  * @param mutex Mutex to unlock.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_unlock(
     corto_mutex mutex);
 
@@ -179,7 +185,7 @@ int corto_mutex_unlock(
  * @param mutex Mutex to free.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_free(
     corto_mutex mutex);
 
@@ -189,7 +195,7 @@ int corto_mutex_free(
  * @param mutex Mutex to free.
  * @return 0 if mutex is free, CORTO_LOCK_BUSY if occupied, other value if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_try(
     corto_mutex mutex);
 
@@ -201,9 +207,9 @@ int corto_mutex_try(
  * @param timeout The maximum amount of time to try to lock the mutex.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_mutex_lockTimed(
-    corto_mutex mutex, 
+    corto_mutex mutex,
     struct timespec timeout);
 
 
@@ -217,7 +223,7 @@ typedef struct corto_rwmutex_s* corto_rwmutex;
  * @param mutex Pointer to uninitialized corto_rwmutex_s structure.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_new(
     struct corto_rwmutex_s *mutex);
 
@@ -228,7 +234,7 @@ int corto_rwmutex_new(
  * @param mutex Mutex to read.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_read(
     corto_rwmutex mutex);
 
@@ -239,7 +245,7 @@ int corto_rwmutex_read(
  * @param mutex Mutex to read.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_write(
     corto_rwmutex mutex);
 
@@ -249,7 +255,7 @@ int corto_rwmutex_write(
  * @param mutex Mutex to read.
  * @return 0 if success, CORTO_LOCK_BUSY if busy, other value if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_tryRead(
     corto_rwmutex mutex);
 
@@ -260,7 +266,7 @@ int corto_rwmutex_tryRead(
  * @param mutex Mutex to write.
  * @return 0 if success, CORTO_LOCK_BUSY if busy, other value if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_tryWrite(
     corto_rwmutex mutex);
 
@@ -270,7 +276,7 @@ int corto_rwmutex_tryWrite(
  * @param mutex Mutex to unlock.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_unlock(
     corto_rwmutex mutex);
 
@@ -279,7 +285,7 @@ int corto_rwmutex_unlock(
  * @param mutex Mutex to free.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rwmutex_free(
     corto_rwmutex mutex);
 
@@ -294,7 +300,7 @@ typedef struct corto_sem_s* corto_sem;
  * @param initValue Initial value of semaphore.
  * @return Handle to new semaphore. NULL if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_sem corto_sem_new(
     unsigned int initValue);
 
@@ -303,7 +309,7 @@ corto_sem corto_sem_new(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_sem_post(
     corto_sem sem);
 
@@ -312,7 +318,7 @@ int corto_sem_post(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_sem_wait(
     corto_sem sem);
 
@@ -321,7 +327,7 @@ int corto_sem_wait(
  * @param sem Handle to semaphore.
  * @return 0 if success, CORTO_LOCK_BUSY if empty, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_sem_tryWait(
     corto_sem sem);
 
@@ -330,7 +336,7 @@ int corto_sem_tryWait(
  * @param sem Handle to semaphore.
  * @return Value of current semaphore.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_sem_value(
     corto_sem sem);
 
@@ -339,7 +345,7 @@ int corto_sem_value(
  * @param sem Handle to semaphore.
  * @return 0 if success, non-zero if failed.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_sem_free(
     corto_sem sem);
 
@@ -355,7 +361,7 @@ int corto_sem_free(
  * @param count Value to increment.
  * @return Value after incrementing.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_ainc(
     int* count);
 
@@ -363,11 +369,11 @@ int corto_ainc(
  * Even if multiple threads simultaneously are calling corto_adec, it is
  * guaranteed that count will be increased by the number of times corto_ainc
  * is invoked.
- * 
+ *
  * @param count Value to decrement.
  * @return Value after decrementing.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_adec(
     int* count);
 

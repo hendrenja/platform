@@ -350,10 +350,16 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
 
     corto_debug("loader: invoke cortomain of '%s' with %d arguments", fileName, argc);
 
-    /* Lookup main function */
+    proc = (int(*)(int,char*[]))corto_dl_proc(dl, "cortoinit");
+    if (proc) {
+        if (proc(argc, argv)) {
+            corto_throw("cortoinit failed");
+            goto error;
+        }
+    }
+
     proc = (int(*)(int,char*[]))corto_dl_proc(dl, "cortomain");
     if (proc) {
-        /* Call main */
         if (proc(argc, argv)) {
             corto_throw("cortomain failed");
             goto error;
