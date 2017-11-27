@@ -95,7 +95,7 @@ corto_log_verbosity corto_log_verbosityGet(void);
 /* -- Logging format used in console -- */
 
 /** Default logging format. */
-#define CORTO_LOGFMT_DEFAULT "%v: [%a] %c: %m"
+#define CORTO_LOGFMT_DEFAULT "%V %F:%L (%R) %C: %m"
 
 /** Set logging format for console.
  * The following characters can be used for specifying the format:

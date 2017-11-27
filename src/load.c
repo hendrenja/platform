@@ -350,10 +350,15 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
 
     corto_debug("loader: invoke cortomain of '%s' with %d arguments", fileName, argc);
 
+    if (!argv) {
+        argv = (char*[]){fileName, NULL};
+        argc = 1;
+    }
+
     proc = (int(*)(int,char*[]))corto_dl_proc(dl, "cortoinit");
     if (proc) {
         if (proc(argc, argv)) {
-            corto_throw("cortoinit failed");
+            corto_throw("cortoinit failed for '%s'", fileName);
             goto error;
         }
     }
@@ -361,7 +366,7 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
     proc = (int(*)(int,char*[]))corto_dl_proc(dl, "cortomain");
     if (proc) {
         if (proc(argc, argv)) {
-            corto_throw("cortomain failed");
+            corto_throw("cortomain failed for '%s'", fileName);
             goto error;
         }
     } else {
@@ -471,7 +476,6 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
             if (alwaysRun) {
                 result = corto_load_fromDl(lib->library, lib->filename, argc, argv);
             }
-
             goto loaded;
         }
     }
@@ -541,26 +545,31 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
         corto_trace("loader: loaded '%s'", str[0] == '/' ? &str[1] : str);
     }
 
+loaded:
     return result;
-error:
-    return -1;
 recursive:
     if (!ignoreRecursive) {
-        corto_error("illegal recursive load of file '%s' from:", lib->name);
+        corto_throw("illegal recursive load of file '%s' from:", lib->name);
+        corto_buffer detail = CORTO_BUFFER_INIT;
+        corto_buffer_appendstr(&detail, "error occurred while loading:\n");
+
         corto_iter iter = corto_ll_iter(loadedAdmin);
         while (corto_iter_hasNext(&iter)) {
             struct corto_loadedAdmin *lib = corto_iter_next(&iter);
             if (lib->loading) {
-                fprintf(stderr, "   %s\n", lib->name);
+                corto_buffer_append(&detail, "    - #[cyan]%s#[normal] #[magenta]=>#[normal] #[white]%s\n", lib->name, lib->filename ? lib->filename : "");
             }
         }
-        corto_backtrace(stderr);
-        abort();
-    } else {
-        corto_mutex_unlock(&corto_load_lock);
+        char *str = corto_buffer_str(&detail);
+        corto_throw_detail(str);
+        free(str);
     }
-loaded:
-    return result;
+    corto_mutex_unlock(&corto_load_lock);
+    if (ignoreRecursive) {
+        return 0;
+    }
+error:
+    return -1;
 }
 
 /* Load a package */

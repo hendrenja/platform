@@ -60,8 +60,10 @@ void base_init(char *appName) {
         }
     }
 
+    corto_log_fmt(corto_getenv("CORTO_LOGFMT"));
+
     CORTO_APP_STATUS = 0;
-    
+
     corto_load_init(
         corto_getenv("CORTO_TARGET"),
         corto_getenv("CORTO_HOME"),

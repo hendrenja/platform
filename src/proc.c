@@ -36,6 +36,21 @@ corto_proc corto_proc_run(const char* exec, char *argv[]) {
         }
     } else if (pid > 0) {
         /* Parent process */
+        if (corto_log_verbosityGet() <= CORTO_TRACE) {
+            corto_buffer buff = CORTO_BUFFER_INIT;
+            int i = 0;
+            while (argv[i]) {
+                if (i) corto_buffer_appendstr(&buff, " ");
+                bool hasSpaces = strchr(argv[i], ' ') != NULL;
+                if (hasSpaces) corto_buffer_appendstr(&buff, "\"");
+                corto_buffer_appendstr(&buff, argv[i]);
+                if (hasSpaces) corto_buffer_appendstr(&buff, "\"");
+                i++;
+            }
+            char *str = corto_buffer_str(&buff);
+            corto_trace("exec '%s' [%d]", str, pid);
+            free(str);
+        }
     } else {
         /* Failure */
     }
@@ -113,6 +128,12 @@ int corto_proc_wait(corto_proc pid, int8_t *rc) {
         }
     }
 
+    if (result) {
+        corto_throw("process %d exited with signal %d", pid, result);
+    } else if (rc && *rc) {
+        corto_throw("process %d exited with returncode %d", pid, *rc);
+    }
+
     return result;
 }
 
@@ -125,14 +146,12 @@ int corto_proc_cmd(char* cmd, int8_t *rc) {
     char stack_buffer[BUFFER_SIZE];
     char *buffer = stack_buffer;
 
-    corto_trace("exec '%s'", cmd);
-
     int len = strlen(cmd);
     if (len >= BUFFER_SIZE) {
         buffer = malloc(len + 1);
     }
 
-    strcpy(buffer, cmd);    
+    strcpy(buffer, cmd);
 
     /* Split up commands */
     char ch, *ptr;

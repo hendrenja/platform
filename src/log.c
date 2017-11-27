@@ -99,6 +99,13 @@ struct corto_log_handler {
 
 static corto_log_tlsData* corto_getThreadData(void){
     corto_log_tlsData* result;
+    if (!CORTO_KEY_LOG) {
+        fprintf(
+            stderr,
+            "*** CORTO_KEY_LOG not initialized! Run corto_start first ***\n");
+        abort();
+    }
+
     result = corto_tls_get(CORTO_KEY_LOG);
     if (!result) {
         result = corto_calloc(sizeof(corto_log_tlsData));
@@ -792,7 +799,7 @@ void corto_raise_codeframe(
     }
 
     if (codeframe->detail) {
-        printf("   %sdetail%s %s\n", CORTO_GREY, CORTO_NORMAL, codeframe->detail);
+        corto_print("   #[grey]detail#[normal] %s\n", codeframe->detail);
     }
 }
 
@@ -801,6 +808,7 @@ void corto_raise_intern(
     corto_log_tlsData *data,
     bool clearCategory)
 {
+
     if (!data->viewed && data->exceptionCount) {
         int category, function, count = 0, total = 0;
         corto_buffer buf = CORTO_BUFFER_INIT;
@@ -857,9 +865,8 @@ void corto_frame_free(
         if ((str = codeframe->file)) free(str);
         if ((str = codeframe->function)) free(str);
         if ((str = codeframe->detail)) free(str);
-        frame->sp = 0;
     }
-    if ((str = frame->category)) free(str);
+    frame->sp = 0;
 }
 
 static
@@ -933,14 +940,22 @@ void corto_log_setError(
             "no active exception to append to (sp = %d)",
             data->exceptionFrames[0].sp);
 
-        /* Add another level to the error stack */
-        corto_log_frame *frame = &data->exceptionFrames[data->exceptionCount - data->sp - 1];
-
-        corto_assert(frame->sp < CORTO_MAX_LOG_CODEFRAMES, "max number of code frames reached");
-
         if (data->stack_marker >= (void*)&stack_marker) {
+            /* If stack marker is higher than the current stack, program is
+             * traveling up the stack after an exception was reported. */
+            printf("<< raise >>\n");
             corto_raise_intern(data, false);
         } else {
+            /* Add another level to the error stack */
+            corto_assert(
+                data->exceptionCount > data->sp,
+                "the total number of exceptions must be larger than the current stack"
+            );
+
+            corto_log_frame *frame = &data->exceptionFrames[data->exceptionCount - data->sp - 1];
+
+            corto_assert(frame->sp < CORTO_MAX_LOG_CODEFRAMES, "max number of code frames reached");
+
             frame->frames[frame->sp].file = strdup(file);
             frame->frames[frame->sp].function = strdup(function);
             frame->frames[frame->sp].line = line;
@@ -1066,6 +1081,10 @@ char* corto_log_parseComponents(
 void corto_log_fmt(
     char *fmt)
 {
+    if (!fmt || !strlen(fmt)) {
+        return;
+    }
+
     if (corto_log_fmt_application) {
         free(corto_log_fmt_application);
     }
@@ -1471,7 +1490,7 @@ void corto_catch(void)
     corto_log_tlsData *data = corto_getThreadData();
     int i;
     if (data->exceptionCount) {
-        for (i = 0; i < data->exceptionCount - 1; i ++) {
+        for (i = 0; i < data->exceptionCount; i ++) {
             corto_log_frame *frame = &data->exceptionFrames[i];
             corto_frame_free(frame);
         }
