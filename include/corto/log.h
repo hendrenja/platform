@@ -106,7 +106,8 @@ corto_log_verbosity corto_log_verbosityGet(void);
  * -C Category (tree view)
  * -m Formatted message
  * -t numerical representation of time (sec, nanosec)
- * -T user-friendly representation of time (1985-4-11 20:00:00)
+ * -T user-friendly representation of time (1985-4-11 20:00:00.0000)
+ * -d Time delta since last message
  * -f filename (use F for filename only in error messages)
  * -l line number (use L for linenumber only in error messages)
  * -r function (use R for function only in error messages)

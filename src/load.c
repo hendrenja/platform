@@ -298,20 +298,16 @@ static corto_dl corto_load_validLibrary(char* fileName, char **build_out) {
     /* Validate version */
     if ((corto_library && library && strcmp(corto_library, library())) || (corto_library && !library)) {
         corto_throw(
-          "corto: library '%s' links with conflicting corto library\n"
-          "  links with: '%s' (%s)\n",
-          fileName, library() ? library() : "unspecified", corto_library ? corto_library : "unspecified");
+          "corto: library '%s' links with conflicting corto library", fileName);
         /* Library is linked with different Corto version */
         if (build_out) {
             *build_out = corto_strdup(library() ? library() : "???");
         }
         goto error;
     } else if (library) {
-        corto_debug(
-          "loader: '%s' links with correct corto library\n  build:   '%s'\n  library: '%s'\n",
-          fileName, library());
+        corto_debug("'%s' links with correct corto library", fileName);
     } else {
-        corto_trace("loader: found '%s' which doesn't link with corto", fileName);
+        corto_trace("found '%s' which doesn't link with corto", fileName);
     }
 
     /* If no build function is available, the library is not linked with
@@ -348,7 +344,7 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
 
     corto_assert(fileName != NULL, "NULL passed to corto_load_fromDl");
 
-    corto_debug("loader: invoke cortomain of '%s' with %d arguments", fileName, argc);
+    corto_debug("invoke cortomain of '%s' with %d arguments", fileName, argc);
 
     if (!argv) {
         argv = (char*[]){fileName, NULL};
@@ -389,7 +385,7 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
         }
 
         corto_ll_insert(libraries, dl);
-        corto_debug("loader: loaded '%s'", fileName);
+        corto_debug("loaded '%s'", fileName);
     }
     corto_mutex_unlock (&corto_load_lock);
 
@@ -458,6 +454,8 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
     struct corto_fileHandler* h;
     int result = -1;
     struct corto_loadedAdmin *lib = NULL;
+
+    corto_log_push(strarg("load:%s", str));
 
     corto_mutex_lock(&corto_load_lock);
     lib = corto_loadedAdminFind(str);
@@ -542,10 +540,11 @@ int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRec
     corto_mutex_unlock(&corto_load_lock);
 
     if (!result) {
-        corto_trace("loader: loaded '%s'", str[0] == '/' ? &str[1] : str);
+        corto_ok("loaded '%s'", str[0] == '/' ? &str[1] : str);
     }
 
 loaded:
+    corto_log_pop();
     return result;
 recursive:
     if (!ignoreRecursive) {
@@ -566,9 +565,11 @@ recursive:
     }
     corto_mutex_unlock(&corto_load_lock);
     if (ignoreRecursive) {
+        corto_log_pop();
         return 0;
     }
 error:
+    corto_log_pop();
     return -1;
 }
 
@@ -622,12 +623,14 @@ static char* corto_locatePackageIntern(
     corto_assert(homePath != NULL, "homePath is not set");
     corto_assert(globalPath != NULL, "globalPath is not set");
 
+    corto_log_push(strarg("locate:%s", lib));
+
     /* Look for local packages first */
     if (!(targetLib = corto_asprintf("%s/%s", targetPath, lib))) {
         goto error;
     }
     if ((ret = corto_file_test(targetLib)) == 1) {
-        corto_debug("loader: locate '%s': found '%s'", lib, targetLib);
+        corto_debug("found '%s'", targetLib);
         if (!isLibrary || corto_checkLibrary(targetLib, &targetBuild, &dl)) {
             t = corto_getModified(targetLib);
             result = targetLib;
@@ -642,7 +645,7 @@ static char* corto_locatePackageIntern(
         if (ret == -1) {
             // corto_queue_raise();
         } else {
-            corto_debug("loader: locate '%s': '%s' not found", lib, targetLib);
+            corto_debug("%s' not found", targetLib);
         }
     }
 
@@ -653,7 +656,7 @@ static char* corto_locatePackageIntern(
         }
         if ((ret = corto_file_test(homeLib)) == 1) {
             time_t myT = corto_getModified(homeLib);
-            corto_debug("loader: locate '%s': found '%s'", lib, homeLib);
+            corto_debug("found '%s'", homeLib);
             if ((myT >= t) || !result) {
                 if (!isLibrary || corto_checkLibrary(homeLib, &homeBuild, &dl)) {
                     t = myT;
@@ -666,18 +669,18 @@ static char* corto_locatePackageIntern(
                     // corto_queue_raise();
                 }
             } else if (!result) {
-                corto_debug("loader: discarding '%s' because '%s' is newer", homeLib, result);
+                corto_debug("discarding '%s' because '%s' is newer", homeLib, result);
             }
         } else {
             if (ret == -1) {
                 // corto_queue_raise();
             } else {
-                corto_debug("loader: locate '%s': '%s' not found", lib, homeLib);
+                corto_debug("'%s' not found", homeLib);
             }
         }
     } else {
-        corto_debug("loader: locate '%s': '%s' already searched ($CORTO_HOME == $CORTO_TARGET)",
-            lib, corto_getenv("CORTO_HOME"));
+        corto_debug("'%s' already searched ($CORTO_HOME == $CORTO_TARGET)",
+            corto_getenv("CORTO_HOME"));
     }
 
     /* Look for global packages */
@@ -688,7 +691,7 @@ static char* corto_locatePackageIntern(
         }
         if ((ret = corto_file_test(usrLib)) == 1) {
             time_t myT = corto_getModified(usrLib);
-            corto_debug("loader: locate '%s': found '%s'", usrLib, lib);
+            corto_debug("found '%s'", lib);
             if ((myT >= t) || !result) {
                 if (!isLibrary || corto_checkLibrary(usrLib, &usrBuild, &dl)) {
                     t = myT;
@@ -701,18 +704,18 @@ static char* corto_locatePackageIntern(
                     // corto_queue_raise();
                 }
             } else if (!result) {
-                corto_debug("loader: discarding '%s' because '%s' is newer", usrLib, result);
+                corto_debug("discarding '%s' because '%s' is newer", usrLib, result);
             }
         } else {
             if (ret == -1) {
                 // corto_queue_raise();
             } else {
-                corto_debug("loader: locate '%s': '%s' not found", lib, usrLib);
+                corto_debug("'%s' not found", usrLib);
             }
         }
     } else {
-        corto_debug("loader: locate '%s': '/usr/local' already searched ($CORTO_HOME='%s' $CORTO_TARGET='%s')",
-            lib, corto_getenv("CORTO_HOME"), corto_getenv("CORTO_TARGET"));
+        corto_debug("'/usr/local' already searched ($CORTO_HOME='%s' $CORTO_TARGET='%s')",
+            corto_getenv("CORTO_HOME"), corto_getenv("CORTO_TARGET"));
     }
 
     if (targetLib && (targetLib != result)) corto_dealloc(targetLib);
@@ -745,8 +748,10 @@ static char* corto_locatePackageIntern(
         *dl_out = dl;
     }
 
+    corto_log_pop();
     return result;
 error:
+    corto_log_pop();
     return NULL;
 }
 #endif

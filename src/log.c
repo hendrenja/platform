@@ -67,6 +67,7 @@ typedef struct corto_log_frame {
     /* The frames array contains the seterr calles for the current category */
     corto_log_codeframe frames[CORTO_MAX_LOG_CODEFRAMES];
     uint32_t sp;
+    struct timespec lastTime;
 } corto_log_frame;
 
 /* Main thread-specific log administration type */
@@ -83,6 +84,9 @@ typedef struct corto_log_tlsData {
     char* categories[CORTO_MAX_LOG_CATEGORIES + 1];
     corto_log_frame frames[CORTO_MAX_LOG_CATEGORIES + 1];
     uint32_t sp;
+
+    /* Last reported time (used for computing deltas) */
+    struct timespec lastTime;
 
     /* Detect if program is unwinding stack in case error was reported */
     void *stack_marker;
@@ -452,6 +456,46 @@ void corto_logprint_friendlyTime(
 }
 
 static
+void corto_logprint_deltaTime(
+    corto_buffer *buf,
+    struct timespec now,
+    corto_log_tlsData *data,
+    bool printCategory)
+{
+    corto_buffer_appendstr(buf, CORTO_GREY);
+    if (data->lastTime.tv_sec || (data->sp && !printCategory)) {
+        struct timespec delta;
+        if (data->sp && !data->frames[data->sp - 1].printed && !printCategory) {
+            delta = timespec_sub(now, data->frames[data->sp - 1].lastTime);
+        } else {
+            delta = timespec_sub(now, data->lastTime);
+        }
+
+        corto_buffer_append(buf, "+%.2d.%.5d", delta.tv_sec, delta.tv_nsec / 10000);
+    } else {
+        corto_buffer_appendstr(buf, " --.-----");
+    }
+    corto_buffer_appendstr(buf, CORTO_NORMAL);
+}
+
+static
+void corto_logprint_sumTime(
+    corto_buffer *buf,
+    struct timespec now,
+    corto_log_tlsData *data)
+{
+    corto_buffer_appendstr(buf, CORTO_MAGENTA);
+    corto_log_frame *frame = &data->frames[data->sp - 1];
+    if (frame->lastTime.tv_sec) {
+        struct timespec delta = timespec_sub(now, frame->lastTime);
+        corto_buffer_append(buf, " %.2d.%.5d", delta.tv_sec, delta.tv_nsec / 10000);
+    } else {
+        corto_buffer_appendstr(buf, " --.-----");
+    }
+    corto_buffer_appendstr(buf, CORTO_NORMAL);
+}
+
+static
 int corto_logprint_categories(
     corto_buffer *buf,
     char *categories[])
@@ -577,7 +621,8 @@ void corto_logprint(
     uint64_t line,
     char const *function,
     char *msg,
-    bool breakAtCategory)
+    uint16_t breakAtCategory,
+    bool closeCategory)
 {
     size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT, *cur;
@@ -590,7 +635,12 @@ void corto_logprint(
         separatedBySpace = FALSE,
         inParentheses = FALSE;
     struct timespec now;
-    timespec_gettime(&now);
+
+    if (!breakAtCategory || closeCategory) {
+        timespec_gettime(&now);
+    } else {
+        now = data->frames[breakAtCategory - 1].lastTime;
+    }
 
     for (fmtptr = corto_log_fmt_current; (ch = *fmtptr); fmtptr++) {
         corto_buffer tmp = CORTO_BUFFER_INIT;
@@ -603,7 +653,16 @@ void corto_logprint(
         if (ch == '%' && fmtptr[1]) {
             int ret = 1;
             switch(fmtptr[1]) {
-            case 'T': corto_logprint_friendlyTime(cur, now); break;
+            case 'd':
+                if (closeCategory) {
+                    corto_logprint_sumTime(cur, now, data);
+                } else {
+                    corto_logprint_deltaTime(cur, now, data, breakAtCategory);
+                }
+                break;
+            case 'T':
+                corto_logprint_friendlyTime(cur, now);
+                break;
             case 't': corto_logprint_time(cur, now); break;
             case 'v': corto_logprint_kind(cur, kind); break;
             case 'k': corto_logprint_kind(cur, kind); break; /* Deprecated */
@@ -632,7 +691,7 @@ void corto_logprint(
                         if (!data->frames[i].printed) {
                             if (i) {
                                 corto_logprint(
-                                    f, kind, categories, file, line, function, NULL, TRUE);
+                                    f, kind, categories, file, line, function, NULL, i + 1, FALSE);
                                 fprintf(
                                     stderr,
                                     "%s%s├>%s %s%s%s\n",
@@ -644,7 +703,7 @@ void corto_logprint(
                                     CORTO_NORMAL);
                             } else {
                                 corto_logprint(
-                                    f, kind, categories, file, line, function, NULL, TRUE);
+                                    f, kind, categories, file, line, function, NULL, i + 1, FALSE);
                                 fprintf(
                                     stderr,
                                     "%s%s%s\n",
@@ -726,6 +785,8 @@ void corto_logprint(
             }
         }
     }
+
+    data->lastTime = now;
 
     char *str = corto_buffer_str(&buf);
 
@@ -991,6 +1052,7 @@ int _corto_log_push(
     frame->initial.line = line;
     frame->initial.thrown = false;
     frame->sp = 0;
+    timespec_gettime(&frame->lastTime);
 
     if (data->sp) {
         data->frames[data->sp - 1].count ++;
@@ -1022,7 +1084,7 @@ void corto_log_pop(void) {
                 char *indent = corto_log_categoryIndent(data->categories, 0);
                 /* Print everything that preceeds the category */
                 corto_logprint(
-                    stderr, CORTO_INFO, data->categories, NULL, 0, NULL, NULL, TRUE);
+                    stderr, CORTO_INFO, data->categories, NULL, 0, NULL, NULL, TRUE, TRUE);
                 fprintf(
                     stderr,
                     "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);
@@ -1146,7 +1208,7 @@ corto_log_verbosity corto_logv(
         msgBody = corto_log_parseComponents(categories, msg);
 
         if (kind >= CORTO_LOG_LEVEL) {
-            corto_logprint(f, kind, categories, file, line, function, msgBody, FALSE);
+            corto_logprint(f, kind, categories, file, line, function, msgBody, FALSE, FALSE);
         }
 
         if (corto_log_handlers) {
@@ -1294,7 +1356,7 @@ void corto_throwv(
             corto_throw("error raised while shutting down");
             corto_raise();
         } else {
-            corto_logprint(stderr, CORTO_DEBUG, NULL, file, line, function, err, FALSE);
+            corto_logprint(stderr, CORTO_DEBUG, NULL, file, line, function, err, FALSE, FALSE);
         }
     }
 
