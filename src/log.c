@@ -1143,21 +1143,24 @@ char* corto_log_parseComponents(
 void corto_log_fmt(
     char *fmt)
 {
+    bool newValue = true;
     if (!fmt || !strlen(fmt)) {
-        return;
+        newValue = false;
     }
 
-    if (corto_log_fmt_application) {
+    if (newValue && corto_log_fmt_application) {
         free(corto_log_fmt_application);
     }
 
-    corto_log_fmt_current = strdup(fmt);
-    corto_log_fmt_application = corto_log_fmt_current;
+    if (newValue) {
+        corto_log_fmt_current = strdup(fmt);
+        corto_log_fmt_application = corto_log_fmt_current;
+    }
 
     corto_setenv("CORTO_LOGFMT", "%s", corto_log_fmt_current);
 
     char *ptr, ch;
-    for (ptr = fmt; (ch = *ptr); ptr++) {
+    for (ptr = corto_log_fmt_current; (ch = *ptr); ptr++) {
         if (ch == '%') {
             if (ptr[1] == 'C') {
                 corto_log_embedCategories(false);
