@@ -80,7 +80,7 @@ typedef enum corto_log_verbosity {
  * @param verbosity Verbosity level.
  */
 CORTO_EXPORT
-void corto_log_verbositySet(
+corto_log_verbosity corto_log_verbositySet(
     corto_log_verbosity verbosity);
 
 /** Get verbosity level
@@ -141,7 +141,10 @@ int _corto_log_push(
 /** Pop a category from the category stack.
  */
 CORTO_EXPORT
-void corto_log_pop(void);
+void _corto_log_pop(
+    char const *file,
+    unsigned int line,
+    char const *function);
 
 /** Embed categories in logmessage or print them on push/pop
  *
@@ -437,19 +440,22 @@ void corto_throw_detail(
     ...);
 
 /** Catch an exception.
+ * If an exception is not catched, it will eventually be logged to the console.
+ *
+ * @return true if an exception was catched.
  */
 CORTO_EXPORT
-void corto_catch(void);
+bool corto_catch(void);
 
 /** Raise an exception.
  */
 CORTO_EXPORT
-void corto_raise(void);
+bool corto_raise(void);
 
 /** Check for unraised exceptions (internal usage).
  */
 CORTO_EXPORT
-void __corto_raise_check(void);
+bool __corto_raise_check(void);
 
 /** Propagate information to calling function.
  * This function is useful when a function wants to propagate a message that
@@ -484,10 +490,13 @@ void corto_print(char *str, ...);
 /* -- Helper macro's -- */
 
 #define corto_critical(...) _corto_critical(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_critical_fl(file, line, ...) _corto_critical(file, line, CORTO_FUNCTION, __VA_ARGS__)
+
 #define corto_throw(...) _corto_throw(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error(...) _corto_error(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning(...) _corto_warning(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);
+#define corto_log_pop() _corto_log_pop(__FILE__, __LINE__, CORTO_FUNCTION);
 #define corto_throw_fl(f, l, ...) _corto_throw(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error_fl(f, l, ...) _corto_error(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, CORTO_FUNCTION, __VA_ARGS__)

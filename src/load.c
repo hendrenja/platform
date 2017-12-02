@@ -215,7 +215,7 @@ int corto_load_register(char* ext, corto_load_cb handler, void* userData) {
             fileHandlers = corto_ll_new();
         }
 
-        corto_trace("load: registered extension '%s'", ext);
+        corto_trace("registered file extension '%s'", ext);
         corto_ll_append(fileHandlers, h);
     }
     corto_mutex_unlock(&corto_load_lock);
@@ -548,7 +548,7 @@ loaded:
     return result;
 recursive:
     if (!ignoreRecursive) {
-        corto_throw("illegal recursive load of file '%s' from:", lib->name);
+        corto_throw("illegal recursive load of file '%s'", lib->name);
         corto_buffer detail = CORTO_BUFFER_INIT;
         corto_buffer_appendstr(&detail, "error occurred while loading:\n");
 
@@ -920,6 +920,9 @@ void* corto_load_sym(char *package, corto_dl *dl_out, char *symbol) {
         if (!*dl_out) {
             /* TODO: THROW ERROR */
         }
+        if (location) {
+            free(location);
+        }
     }
 
     if (*dl_out) {
@@ -1050,8 +1053,10 @@ void corto_loaderOnExit(void* ctx) {
         iter = corto_ll_iter(loadedAdmin);
          while(corto_iter_hasNext(&iter)) {
              struct corto_loadedAdmin *loaded = corto_iter_next(&iter);
-             corto_dealloc(loaded->name);
-             corto_dealloc(loaded);
+             free(loaded->name);
+             if (loaded->filename) free(loaded->filename);
+             if (loaded->base) free(loaded->base);
+             free(loaded);
          }
          corto_ll_free(loadedAdmin);
     }

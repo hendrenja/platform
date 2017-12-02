@@ -865,12 +865,12 @@ void corto_raise_codeframe(
 }
 
 static
-void corto_raise_intern(
+bool corto_raise_intern(
     corto_log_tlsData *data,
     bool clearCategory)
 {
 
-    if (!data->viewed && data->exceptionCount) {
+    if (!data->viewed && data->exceptionCount && (CORTO_LOG_LEVEL >= CORTO_ERROR)) {
         int category, function, count = 0, total = 0;
         corto_buffer buf = CORTO_BUFFER_INIT;
 
@@ -911,6 +911,10 @@ void corto_raise_intern(
         }
 
         data->viewed = true;
+
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -1004,7 +1008,6 @@ void corto_log_setError(
         if (data->stack_marker >= (void*)&stack_marker) {
             /* If stack marker is higher than the current stack, program is
              * traveling up the stack after an exception was reported. */
-            printf("<< raise >>\n");
             corto_raise_intern(data, false);
         } else {
             /* Add another level to the error stack */
@@ -1063,12 +1066,18 @@ int _corto_log_push(
     return -1;
 }
 
-void corto_log_pop(void) {
+void _corto_log_pop(
+    char const *file,
+    unsigned int line,
+    char const *function)
+{
     corto_log_tlsData *data = corto_getThreadData();
 
     if (data->sp) {
         corto_log_frame *frame = &data->frames[data->sp - 1];
 
+        if (frame->initial.file) free(frame->initial.file);
+        if (frame->initial.function) free(frame->initial.function);
         if (frame->category) free(frame->category);
         frame->sp = 0;
 
@@ -1094,7 +1103,7 @@ void corto_log_pop(void) {
 
         data->sp --;
     } else {
-        corto_critical("corto_log_pop called more times than corto_log_push");
+        corto_critical_fl(file, line, "corto_log_pop called more times than corto_log_push");
     }
 }
 
@@ -1549,7 +1558,7 @@ void corto_setinfo(
     va_end(arglist);
 }
 
-void corto_catch(void)
+bool corto_catch(void)
 {
     /* Clear exception */
     corto_log_tlsData *data = corto_getThreadData();
@@ -1560,22 +1569,26 @@ void corto_catch(void)
             corto_frame_free(frame);
         }
         data->exceptionCount = 0;
+        return true;
+    } else {
+        return false;
     }
 }
 
-void corto_raise(void) {
+bool corto_raise(void) {
     corto_log_tlsData *data = corto_getThreadData();
-    corto_raise_intern(data, true);
+    return corto_raise_intern(data, true);
 }
 
-void __corto_raise_check(void) {
+bool __corto_raise_check(void) {
     corto_log_tlsData *data = corto_getThreadData();
-    corto_raise_intern(data, false);
+    return corto_raise_intern(data, false);
 }
 
-void corto_log_verbositySet(
+corto_log_verbosity corto_log_verbositySet(
     corto_log_verbosity level)
 {
+    corto_log_verbosity old = CORTO_LOG_LEVEL;
     switch(level) {
     case CORTO_DEBUG: corto_setenv("CORTO_VERBOSITY", "DEBUG"); break;
     case CORTO_TRACE: corto_setenv("CORTO_VERBOSITY", "TRACE"); break;
@@ -1587,10 +1600,11 @@ void corto_log_verbositySet(
     case CORTO_ASSERT: corto_setenv("CORTO_VERBOSITY", "ASSERT"); break;
     default:
         corto_critical("invalid verbosity level %d", level);
-        return;
+        return -1;
     }
 
     CORTO_LOG_LEVEL = level;
+    return old;
 }
 
 corto_log_verbosity corto_log_verbosityGet() {
