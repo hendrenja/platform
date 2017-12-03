@@ -62,6 +62,11 @@ void base_init(char *appName) {
 
     corto_log_fmt(corto_getenv("CORTO_LOGFMT"));
 
+    char *profile = corto_getenv("CORTO_LOG_PROFILE");
+    if (profile && !strcmp(profile, "TRUE")) {
+        corto_log_profile(true);
+    }
+
     CORTO_APP_STATUS = 0;
 
     corto_load_init(

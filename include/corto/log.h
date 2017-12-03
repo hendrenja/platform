@@ -75,8 +75,7 @@ typedef enum corto_log_verbosity {
 } corto_log_verbosity;
 
 /** Set verbosity level
- * The verbosity level is the same for all threads. When verbosity leve is set
- * to DEBUG, backtraces are automatically enabled.
+ * The verbosity level is the same for all threads.
  * @param verbosity Verbosity level.
  */
 CORTO_EXPORT
@@ -90,7 +89,31 @@ corto_log_verbosity corto_log_verbositySet(
 CORTO_EXPORT
 corto_log_verbosity corto_log_verbosityGet(void);
 
+/** Set tail verbosity level
+ * Tail verbosity allows logging messages of a lower logging level to the end of
+ * the console trace that will be overwritten by higher-level logging messages.
+ *
+ * Tail verbosity level is the same for all threads.
+ * @param verbosity Verbosity level.
+ */
+CORTO_EXPORT
+corto_log_verbosity corto_log_tailVerbositySet(
+    corto_log_verbosity verbosity);
 
+/** Get tail verbosity level
+ * The tail verbosity level is the same for all threads.
+ * @return The current tail verbosity level.
+ */
+CORTO_EXPORT
+corto_log_verbosity corto_log_tailVerbosityGet(void);
+
+/** Enable or disable profiling.
+ *
+ * When profiling is enabled, categories will always be printed to the console.
+ */
+CORTO_EXPORT
+bool corto_log_profile(
+    bool enable);
 
 /* -- Logging format used in console -- */
 
@@ -424,6 +447,14 @@ void _corto_throw(
     char *fmt,
     ...);
 
+CORTO_EXPORT
+void _corto_throw_fallback(
+    char const *file,
+    unsigned int line,
+    char const *function,
+    char *fmt,
+    ...);
+
 /* As corto_throw, but with va_list parameter. */
 CORTO_EXPORT
 void corto_throwv(
@@ -457,6 +488,19 @@ bool corto_raise(void);
 CORTO_EXPORT
 bool __corto_raise_check(void);
 
+typedef enum corto_log_exceptionAction {
+    CORTO_LOG_ON_EXCEPTION_IGNORE = 0,
+    CORTO_LOG_ON_EXCEPTION_EXIT = 1,
+    CORTO_LOG_ON_EXCEPTION_ABORT = 2
+} corto_log_exceptionAction;
+
+/** Specify what to do when exception is raised.
+ */
+CORTO_EXPORT
+corto_log_exceptionAction corto_log_setExceptionAction(
+    corto_log_exceptionAction action);
+
+
 /** Propagate information to calling function.
  * This function is useful when a function wants to propagate a message that
  * is does not necessarily indicate an error. The framework will not report a
@@ -485,27 +529,38 @@ char *corto_lasterr();
 
 /* -- Utilities -- */
 CORTO_EXPORT
-void corto_print(char *str, ...);
+void corto_log(char *str, ...);
+
+CORTO_EXPORT
+void corto_log_tail(char *str, ...);
 
 /* -- Helper macro's -- */
 
 #define corto_critical(...) _corto_critical(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_critical_fl(file, line, ...) _corto_critical(file, line, CORTO_FUNCTION, __VA_ARGS__)
 
+#define _SHOULD_PRINT(lvl)\
+    corto_log_handlersRegistered() ||\
+    corto_log_verbosityGet() <= lvl ||\
+    corto_log_tailVerbosityGet() <= lvl\
+
+
 #define corto_throw(...) _corto_throw(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_throw_fallback(...) _corto_throw_fallback(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error(...) _corto_error(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning(...) _corto_warning(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_log_push(category) _corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);
 #define corto_log_pop() _corto_log_pop(__FILE__, __LINE__, CORTO_FUNCTION);
 #define corto_throw_fl(f, l, ...) _corto_throw(f, l, CORTO_FUNCTION, __VA_ARGS__)
+#define corto_throw_fallback_fl(f, l, ...) _corto_throw_fallback(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_error_fl(f, l, ...) _corto_error(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_warning_fl(f, l, ...) _corto_warning(f, l, CORTO_FUNCTION, __VA_ARGS__)
 #ifndef NDEBUG
 #define corto_assert(condition, ...) if (!(condition)){_corto_assert(__FILE__, __LINE__, CORTO_FUNCTION, condition, "(" #condition ") " __VA_ARGS__);}
-#define corto_debug(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_DEBUG) { _corto_debug(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
-#define corto_trace(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_TRACE) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
-#define corto_info(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_INFO) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
-#define corto_ok(...) if(corto_log_handlersRegistered() || corto_log_verbosityGet() <= CORTO_OK) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_debug(...) if(_SHOULD_PRINT(CORTO_DEBUG)) { _corto_debug(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_trace(...) if(_SHOULD_PRINT(CORTO_TRACE)) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_info(...) if(_SHOULD_PRINT(CORTO_INFO)) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_ok(...) if(_SHOULD_PRINT(CORTO_OK)) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)
