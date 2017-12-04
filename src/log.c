@@ -591,18 +591,27 @@ char const* corto_log_stripFunctionName(
     }
 }
 
+#define CORTO_LOG_FILE_LEN (20)
+
 static
 int corto_logprint_file(
     corto_buffer *buf,
-    char const *file)
+    char const *file,
+    bool fixedWidth)
 {
+    file = corto_log_stripFunctionName(file);
     if (file) {
-        corto_buffer_append(
-            buf,
-            "%s%s%s",
-            CORTO_GREY,
-            (char*)corto_log_stripFunctionName(file),
-            CORTO_NORMAL);
+        if (!fixedWidth) {
+            corto_buffer_append(buf, "%s%s%s", CORTO_BLUE, file, CORTO_NORMAL);
+        } else {
+            int len = strlen(file);
+            if (len > (CORTO_LOG_FILE_LEN)) {
+                file += len - CORTO_LOG_FILE_LEN + 2;
+                corto_buffer_append(buf, "%s..%*s%s", CORTO_BLUE, CORTO_LOG_FILE_LEN - 2, file, CORTO_NORMAL);
+            } else {
+                corto_buffer_append(buf, "%s%*s%s", CORTO_BLUE, CORTO_LOG_FILE_LEN, file, CORTO_NORMAL);
+            }
+        }
         return 1;
     } else {
         return 0;
@@ -612,10 +621,17 @@ int corto_logprint_file(
 static
 int corto_logprint_line(
     corto_buffer *buf,
-    uint64_t line)
+    uint64_t line,
+    bool fixedWidth)
 {
     if (line) {
         corto_buffer_append(buf, "%s%u%s", CORTO_GREEN, line, CORTO_NORMAL);
+        if (fixedWidth) {
+            int len = 4 - (floor(log10(line)) + 1);
+            if (len) {
+                corto_buffer_append(buf, "%*s", len, "");
+            }
+        }
         return 1;
     } else {
         return 0;
@@ -739,7 +755,6 @@ void corto_logprint(
                 break;
             case 't': corto_logprint_time(cur, now); break;
             case 'v': corto_logprint_kind(cur, kind); break;
-            case 'k': corto_logprint_kind(cur, kind); break; /* Deprecated */
             case 'c':
             case 'C':
                 if (breakAtCategory) {
@@ -801,15 +816,15 @@ void corto_logprint(
                 }
                 ret = corto_logprint_categories(cur, categories);
                 break;
-            case 'f': ret = corto_logprint_file(cur, file); break;
-            case 'l': ret = corto_logprint_line(cur, line); break;
+            case 'f': ret = corto_logprint_file(cur, file, !corto_log_shouldEmbedCategories); break;
+            case 'l': ret = corto_logprint_line(cur, line, !corto_log_shouldEmbedCategories); break;
             case 'r': ret = corto_logprint_function(cur, function); break;
             case 'm': ret = corto_logprint_msg(cur, msg); break;
             case 'a': corto_buffer_append(cur, "%s%s%s", CORTO_CYAN, corto_log_appName, CORTO_NORMAL); break;
             case 'A': ret = corto_logprint_proc(cur); break;
             case 'V': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { corto_logprint_kind(cur, kind); } else { ret = 0; } break;
-            case 'F': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_file(cur, file); } else { ret = 0; } break;
-            case 'L': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_line(cur, line); } else { ret = 0; } break;
+            case 'F': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
+            case 'L': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_line(cur, line, FALSE); } else { ret = 0; } break;
             case 'R': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_function(cur, function); } else { ret = 0; } break;
             default:
                 corto_buffer_appendstr(cur, "%");
@@ -902,28 +917,21 @@ void corto_raise_codeframe(
     corto_buffer *buf,
     corto_log_frame *frame,
     corto_log_codeframe *codeframe,
-    char *categories[],
     bool first)
 {
     if (frame->category) {
-        char *categoryStr;
-        int i = 0;
-        while (categories[i]) {
-            categoryStr = categories[i];
-            i++;
-        }
-        if (categoryStr) {
-            corto_buffer_append(buf, " %s%s%s", CORTO_GREY, categoryStr, CORTO_NORMAL);
+        if (frame->category) {
+            corto_buffer_append(buf, " %s%s%s", CORTO_GREY, frame->category, CORTO_NORMAL);
         }
     }
 
     if (codeframe->file) {
         corto_buffer_appendstr(buf, " ");
-        corto_logprint_file(buf, codeframe->file);
+        corto_logprint_file(buf, codeframe->file, FALSE);
     }
     if (codeframe->line) {
         corto_buffer_appendstrn(buf, ":", 1);
-        corto_logprint_line(buf, codeframe->line);
+        corto_logprint_line(buf, codeframe->line, FALSE);
     }
     if (codeframe->function) {
         corto_buffer_appendstrn(buf, " (", 2);
@@ -957,30 +965,22 @@ bool corto_raise_intern(
     bool clearCategory)
 {
     if (!data->viewed && data->exceptionCount && (CORTO_LOG_LEVEL <= CORTO_ERROR)) {
-        int category, function, count = 0, total = 0;
+        int category, function, count = 0, total = data->exceptionCount;
         corto_buffer buf = CORTO_BUFFER_INIT;
-
-        char *categories[CORTO_MAX_LOG_CATEGORIES];
-        while (data->exceptionCategories[total]) {
-            categories[total] = data->exceptionCategories[total];
-            total ++;
-        }
-        categories[total] = NULL;
 
         for (category = 0; category < data->exceptionCount; category ++) {
             corto_log_frame *frame = &data->exceptionFrames[category];
             for (function = 0; function < frame->sp; function ++) {
                 corto_log_codeframe *codeframe = &frame->frames[function];
-                corto_raise_codeframe(&buf, frame, codeframe, categories, !count);
+                corto_raise_codeframe(&buf, frame, codeframe, !count);
                 count ++;
             }
 
             if (category != data->exceptionCount - 1) {
-                corto_raise_codeframe(&buf, frame, &frame->initial, categories, !count);
+                corto_raise_codeframe(&buf, frame, &frame->initial, !count);
                 count ++;
             }
 
-            categories[total - category - 1] = NULL;
             if (clearCategory) {
                 data->exceptionCategories[total - category - 1] = NULL;
             }
@@ -1071,6 +1071,8 @@ void corto_log_setError(
         for (i = 1; i <= data->sp; i ++) {
             data->exceptionFrames[i - 1] = data->frames[data->sp - i];
             data->exceptionFrames[i - 1].category = strdup(data->frames[data->sp - i].category);
+            data->exceptionFrames[i - 1].initial.file = strdup(data->frames[data->sp - i].initial.file);
+            data->exceptionFrames[i - 1].initial.function = strdup(data->frames[data->sp - i].initial.function);
             data->exceptionFrames[i - 1].sp = 0;
         }
         data->exceptionCount = data->sp + 1;
@@ -1179,6 +1181,14 @@ void _corto_log_pop(
                 stderr, CORTO_INFO, NULL, file, line, function, NULL, FALSE, TRUE);
         }
 
+        if (strcmp(frame->initial.function, function)) {
+            corto_warning_fl(
+                file,
+                line,
+                "log_pop called in '%s' but matching log_push in '%s'",
+                function, frame->initial.function);
+        }
+
         if (frame->initial.file) free(frame->initial.file);
         if (frame->initial.function) free(frame->initial.function);
         if (frame->category) free(frame->category);
@@ -1196,7 +1206,7 @@ void _corto_log_pop(
                 char *indent = corto_log_categoryIndent(data->categories, 0);
                 /* Print everything that preceeds the category */
                 corto_logprint(
-                    stderr, CORTO_INFO, data->categories, NULL, 0, NULL, NULL, TRUE, TRUE);
+                    stderr, CORTO_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
                 fprintf(
                     stderr,
                     "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);

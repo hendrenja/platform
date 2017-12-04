@@ -449,7 +449,7 @@ int corto_loadLibraryAction(char* file, int argc, char* argv[], void *data) {
 }
 
 /* Load a package */
-int corto_loadIntern(char* str, int argc, char* argv[], bool try, bool ignoreRecursive, bool alwaysRun) {
+int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRecursive, bool alwaysRun) {
     char ext[16];
     struct corto_fileHandler* h;
     int result = -1;
@@ -575,17 +575,17 @@ error:
 
 /* Load a package */
 int corto_load(char* str, int argc, char* argv[]) {
-    return corto_loadIntern(str, argc, argv, FALSE, FALSE, FALSE);
+    return corto_load_intern(str, argc, argv, FALSE, FALSE, FALSE);
 }
 
 /* Run a package */
 int corto_run(char* str, int argc, char* argv[]) {
-    return corto_loadIntern(str, argc, argv, FALSE, FALSE, TRUE);
+    return corto_load_intern(str, argc, argv, FALSE, FALSE, TRUE);
 }
 
 /* Try loading a package */
 int corto_load_try(char* str, int argc, char* argv[]) {
-    return corto_loadIntern(str, argc, argv, TRUE, FALSE, FALSE);
+    return corto_load_intern(str, argc, argv, TRUE, FALSE, FALSE);
 }
 
 #ifndef CORTO_REDIS
