@@ -890,7 +890,7 @@ void corto_raise_codeframe(
 {
     if (frame->category) {
         if (frame->category) {
-            corto_buffer_append(buf, " %s%s%s", CORTO_GREY, frame->category, CORTO_NORMAL);
+            corto_buffer_append(buf, " %s", frame->category);
         }
     }
 
@@ -914,11 +914,11 @@ void corto_raise_codeframe(
     char *str = corto_buffer_str(buf);
     if (str) {
         if (codeframe->thrown && !first) {
-            fprintf(stderr, "     %sfrom%s%s\n", CORTO_RED, CORTO_NORMAL, str);
+            corto_log("     #[red]from#[normal]%s\n", str);
         } else if (first) {
-            fprintf(stderr, "%sexception%s%s\n", CORTO_RED, CORTO_NORMAL, str);
+            corto_log("#[red]exception#[normal]%s\n", str);
         } else {
-            fprintf(stderr, "    %safter%s%s\n", CORTO_RED, CORTO_NORMAL, str);
+            corto_log("    #[red]after#[normal]%s\n", str);
         }
         free(str);
     }
@@ -957,8 +957,8 @@ bool corto_raise_intern(
             frame->sp = 0;
         }
 
-        fprintf(stderr, "     %sproc%s %s%s %s[%s%d%s]\n\n",
-            CORTO_RED, CORTO_NORMAL, CORTO_GREY, corto_log_appName, CORTO_NORMAL, CORTO_GREY, corto_proc(), CORTO_NORMAL);
+        corto_log("     #[red]proc#[normal] #[grey]%s #[normal][%d]\n\n",
+            corto_log_appName, corto_proc());
 
         if (clearCategory) {
             data->exceptionCount = 0;
@@ -1058,7 +1058,7 @@ void corto_log_setError(
         data->exceptionFrames[0].frames[0].file = strdup(file);
         data->exceptionFrames[0].frames[0].function = strdup(function);
         data->exceptionFrames[0].frames[0].line = line;
-        data->exceptionFrames[0].frames[0].error = error ? corto_log_colorize(error) : NULL;
+        data->exceptionFrames[0].frames[0].error = strdup(error);
         data->exceptionFrames[0].frames[0].thrown = true;
         data->exceptionFrames[0].sp = 1;
 
@@ -1090,7 +1090,7 @@ void corto_log_setError(
             frame->frames[frame->sp].file = strdup(file);
             frame->frames[frame->sp].function = strdup(function);
             frame->frames[frame->sp].line = line;
-            frame->frames[frame->sp].error = error ? corto_log_colorize(error) : NULL;
+            frame->frames[frame->sp].error = strdup(error);
             frame->frames[frame->sp].thrown = true;
             frame->sp ++;
         }
