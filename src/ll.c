@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ corto_ll corto_ll_new() {
 }
 
 /* Get listsize */
-int corto_ll_size(corto_ll list) {
+int corto_ll_count(corto_ll list) {
     return list->size;
 }
 
@@ -324,7 +324,7 @@ void corto_ll_insertList(corto_ll l1, corto_ll l2) {
 
 /* Reverse list */
 void corto_ll_reverse(corto_ll list) {
-    uint32_t i, size = corto_ll_size(list);
+    uint32_t i, size = corto_ll_count(list);
     corto_ll_node start = list->first;
     corto_ll_node end = list->last;
     corto_ll_node ptr;

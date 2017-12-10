@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,7 @@ static corto_log_exceptionAction CORTO_LOG_EXCEPTION_ACTION = 0;
 static char *corto_log_fmt_application;
 static char *corto_log_fmt_current = CORTO_LOGFMT_DEFAULT;
 static bool corto_log_shouldEmbedCategories = true;
+static bool CORTO_LOG_USE_COLORS = true;
 
 /* Maximum stacktrace */
 #define BACKTRACE_DEPTH 60
@@ -170,7 +171,7 @@ void corto_log_handlerUnregister(
     if (callback) {
         corto_mutex_lock(&corto_log_lock);
         corto_ll_remove(corto_log_handlers, callback);
-        if (!corto_ll_size(corto_log_handlers)) {
+        if (!corto_ll_count(corto_log_handlers)) {
             corto_ll_free(corto_log_handlers);
             corto_log_handlers = NULL;
         }
@@ -278,34 +279,24 @@ char* corto_log_categoryIndent(
     int i = 0;
     corto_buffer buff = CORTO_BUFFER_INIT;
 
-    corto_buffer_appendstr(&buff, CORTO_GREY);
-
     while (categories[i] && (!count || i < count)) {
         i ++;
-        corto_buffer_appendstr(&buff, "|  ");
+        corto_buffer_appendstr(&buff, "#[grey]|#[normal]  ");
     }
-
-    corto_buffer_appendstr(&buff, CORTO_NORMAL);
 
     return corto_buffer_str(&buff);
 }
 
 static
 char* corto_log_categoryString(
-    char *categories[],
-    bool color)
+    char *categories[])
 {
     int32_t i = 0;
     corto_buffer buff = CORTO_BUFFER_INIT;
 
     if (categories) {
         while (categories[i]) {
-            if (color) {
-                corto_buffer_append(&buff, "%s%s%s",
-                    CORTO_MAGENTA, categories[i], CORTO_NORMAL);
-            } else {
-                corto_buffer_appendstr(&buff, categories[i]);
-            }
+            corto_buffer_append(&buff, "#[green]%s#[normal]", categories[i]);
             i ++;
             if (categories[i]) {
                 corto_buffer_appendstr(&buff, ".");
@@ -352,28 +343,28 @@ char* corto_log_colorize(
 
         if (!overrideColor) {
             if (isNum && !isdigit(ch) && !isalpha(ch) && (ch != '.') && (ch != '%')) {
-                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
                 isNum = FALSE;
             }
             if (isStr && (isStr == ch) && prev != '\\') {
                 isStr = '\0';
             } else if (((ch == '\'') || (ch == '"')) && !isStr && !isalpha(prev) && (prev != '\\')) {
-                corto_buffer_appendstr(&buff, CORTO_CYAN);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_CYAN);
                 isStr = ch;
             }
 
             if ((isdigit(ch) || (ch == '%' && isdigit(prev)) || (ch == '-' && isdigit(ptr[1]))) && !isNum && !isStr && !isVar && !isalpha(prev) && !isdigit(prev) && (prev != '_') && (prev != '.')) {
-                corto_buffer_appendstr(&buff, CORTO_GREEN);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_GREEN);
                 isNum = TRUE;
             }
 
             if (isVar && !isalpha(ch) && !isdigit(ch) && ch != '_') {
-                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
                 isVar = FALSE;
             }
 
             if (!isStr && !isVar && ch == '$' && isalpha(ptr[1])) {
-                corto_buffer_appendstr(&buff, CORTO_MAGENTA);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_CYAN);
                 isVar = TRUE;
             }
         }
@@ -386,25 +377,25 @@ char* corto_log_colorize(
             if (!strncmp(&ptr[2], "]", strlen("]"))) {
                 autoColor = false;
             } else if (!strncmp(&ptr[2], "green]", strlen("green]"))) {
-                corto_buffer_appendstr(&buff, CORTO_GREEN);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_GREEN);
             } else if (!strncmp(&ptr[2], "red]", strlen("red]"))) {
-                corto_buffer_appendstr(&buff, CORTO_RED);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_RED);
             } else if (!strncmp(&ptr[2], "blue]", strlen("red]"))) {
-                corto_buffer_appendstr(&buff, CORTO_BLUE);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_BLUE);
             } else if (!strncmp(&ptr[2], "magenta]", strlen("magenta]"))) {
-                corto_buffer_appendstr(&buff, CORTO_MAGENTA);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_MAGENTA);
             } else if (!strncmp(&ptr[2], "cyan]", strlen("cyan]"))) {
-                corto_buffer_appendstr(&buff, CORTO_CYAN);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_CYAN);
             } else if (!strncmp(&ptr[2], "yellow]", strlen("yellow]"))) {
-                corto_buffer_appendstr(&buff, CORTO_YELLOW);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_YELLOW);
             } else if (!strncmp(&ptr[2], "grey]", strlen("grey]"))) {
-                corto_buffer_appendstr(&buff, CORTO_GREY);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_GREY);
             } else if (!strncmp(&ptr[2], "white]", strlen("white]"))) {
-                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
             } else if (!strncmp(&ptr[2], "bold]", strlen("bold]"))) {
-                corto_buffer_appendstr(&buff, CORTO_BOLD);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_BOLD);
             } else if (!strncmp(&ptr[2], "normal]", strlen("normal]"))) {
-                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
                 overrideColor = false;
             } else {
                 isColor = false;
@@ -427,7 +418,7 @@ char* corto_log_colorize(
 
         if (!overrideColor) {
             if (((ch == '\'') || (ch == '"')) && !isStr) {
-                corto_buffer_appendstr(&buff, CORTO_NORMAL);
+                if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
             }
         }
 
@@ -435,7 +426,7 @@ char* corto_log_colorize(
     }
 
     if (isNum || isStr || isVar || overrideColor) {
-        corto_buffer_appendstr(&buff, CORTO_NORMAL);
+        if (CORTO_LOG_USE_COLORS) corto_buffer_appendstr(&buff, CORTO_NORMAL);
     }
 
     return corto_buffer_str(&buff);
@@ -450,14 +441,14 @@ void corto_logprint_kind(
     int levelspace;
 
     switch(kind) {
-    case CORTO_THROW: color = CORTO_RED; levelstr = "exception"; break;
-    case CORTO_ERROR: color = CORTO_RED; levelstr = "error"; break;
-    case CORTO_WARNING: color = CORTO_YELLOW; levelstr = "warn"; break;
-    case CORTO_INFO: color = CORTO_BLUE; levelstr = "info"; break;
-    case CORTO_OK: color = CORTO_GREEN; levelstr = "ok"; break;
-    case CORTO_TRACE: color = CORTO_GREY; levelstr = "trace"; break;
-    case CORTO_DEBUG: color = CORTO_GREY; levelstr = "debug"; break;
-    default: color = CORTO_RED; levelstr = "critical"; break;
+    case CORTO_THROW: color = "#[red]"; levelstr = "exception"; break;
+    case CORTO_ERROR: color = "#[red]"; levelstr = "error"; break;
+    case CORTO_WARNING: color = "#[yellow]"; levelstr = "warn"; break;
+    case CORTO_INFO: color = "#[blue]"; levelstr = "info"; break;
+    case CORTO_OK: color = "#[green]"; levelstr = "ok"; break;
+    case CORTO_TRACE: color = "#[grey]"; levelstr = "trace"; break;
+    case CORTO_DEBUG: color = "#[grey]"; levelstr = "debug"; break;
+    default: color = "#[red]"; levelstr = "critical"; break;
     }
 
     if (corto_log_verbosityGet() <= CORTO_TRACE) {
@@ -467,7 +458,7 @@ void corto_logprint_kind(
     }
 
     corto_buffer_append(
-        buf, "%s%*s%s", color, levelspace, levelstr, CORTO_NORMAL);
+        buf, "%s%*s#[normal]", color, levelspace, levelstr);
 }
 
 static
@@ -497,7 +488,7 @@ void corto_logprint_deltaTime(
     corto_log_tlsData *data,
     bool printCategory)
 {
-    corto_buffer_appendstr(buf, CORTO_GREY);
+    corto_buffer_appendstr(buf, "#[grey]");
     if (CORTO_LOG_PROFILE) {
         corto_buffer_appendstr(buf, " --------");
     } else {
@@ -514,7 +505,7 @@ void corto_logprint_deltaTime(
             corto_buffer_appendstr(buf, " --------");
         }
     }
-    corto_buffer_appendstr(buf, CORTO_NORMAL);
+    corto_buffer_appendstr(buf, "#[normal]");
 }
 
 static
@@ -529,7 +520,7 @@ bool corto_logprint_sumTime(
         if (!delta.tv_sec && delta.tv_nsec < 50000) {
             return false;
         }
-        corto_buffer_append(buf, " %s%.2d.%.5d%s", CORTO_MAGENTA, delta.tv_sec, delta.tv_nsec / 10000, CORTO_NORMAL);
+        corto_buffer_append(buf, " #[green]%.2d.%.5d#[normal]", delta.tv_sec, delta.tv_nsec / 10000);
     } else {
         corto_buffer_appendstr(buf, " --------");
     }
@@ -541,7 +532,7 @@ int corto_logprint_categories(
     corto_buffer *buf,
     char *categories[])
 {
-    char *categoryStr = categories ? corto_log_categoryString(categories, true) : NULL;
+    char *categoryStr = categories ? corto_log_categoryString(categories) : NULL;
     if (categoryStr) {
         int l = categoryStr[0] != 0;
         corto_buffer_appendstr(buf, categoryStr);
@@ -557,17 +548,10 @@ int corto_logprint_msg(
     corto_buffer *buf,
     char* msg)
 {
-    char *tokenized = msg;
     if (!msg) {
         return 0;
     }
-
-    if (!strchr(msg, '\033')) {
-        tokenized = corto_log_colorize(msg);
-    }
-    corto_buffer_appendstr(buf, tokenized);
-    if (tokenized != msg) corto_dealloc(tokenized);
-
+    corto_buffer_appendstr(buf, msg);
     return 1;
 }
 
@@ -602,14 +586,14 @@ int corto_logprint_file(
     file = corto_log_stripFunctionName(file);
     if (file) {
         if (!fixedWidth) {
-            corto_buffer_append(buf, "%s%s%s", CORTO_BLUE, file, CORTO_NORMAL);
+            corto_buffer_append(buf, "#[cyan]%s#[normal]", file);
         } else {
             int len = strlen(file);
             if (len > (CORTO_LOG_FILE_LEN)) {
                 file += len - CORTO_LOG_FILE_LEN + 2;
-                corto_buffer_append(buf, "%s..%*s%s", CORTO_BLUE, CORTO_LOG_FILE_LEN - 2, file, CORTO_NORMAL);
+                corto_buffer_append(buf, "#[cyan]..%*s#[normal]", CORTO_LOG_FILE_LEN - 2, file);
             } else {
-                corto_buffer_append(buf, "%s%*s%s", CORTO_BLUE, CORTO_LOG_FILE_LEN, file, CORTO_NORMAL);
+                corto_buffer_append(buf, "#[cyan]%*s#[normal]", CORTO_LOG_FILE_LEN, file);
             }
         }
         return 1;
@@ -625,7 +609,7 @@ int corto_logprint_line(
     bool fixedWidth)
 {
     if (line) {
-        corto_buffer_append(buf, "%s%u%s", CORTO_GREEN, line, CORTO_NORMAL);
+        corto_buffer_append(buf, "#[green]%u#[normal]", line);
         if (fixedWidth) {
             int len = 4 - (floor(log10(line)) + 1);
             if (len) {
@@ -644,7 +628,7 @@ int corto_logprint_function(
     char const *function)
 {
     if (function) {
-        corto_buffer_append(buf, "%s%s%s", CORTO_BLUE, function, CORTO_NORMAL);
+        corto_buffer_append(buf, "#[cyan]%s#[normal]", function);
         return 1;
     } else {
         return 0;
@@ -656,16 +640,16 @@ int corto_logprint_proc(
     corto_buffer *buf)
 {
     char *colors[] = {
-        CORTO_GREEN,
-        CORTO_YELLOW,
-        CORTO_BLUE,
-        CORTO_MAGENTA
-        CORTO_CYAN,
-        CORTO_WHITE,
-        CORTO_GREY,
+        "green",
+        "yellow",
+        "blue",
+        "magenta"
+        "cyan",
+        "white",
+        "grey",
     };
     corto_proc id = corto_proc();
-    corto_buffer_append(buf, "%s%u%s", colors[id % 6], id, CORTO_NORMAL);
+    corto_buffer_append(buf, "#[%s]%u#[normal]", colors[id % 6], id);
     return 1;
 }
 
@@ -706,7 +690,6 @@ void corto_logprint(
     uint16_t breakAtCategory,
     bool closeCategory)
 {
-    size_t n = 0;
     corto_buffer buf = CORTO_BUFFER_INIT, *cur;
     char *fmtptr, ch;
     corto_log_tlsData *data = corto_getThreadData();
@@ -782,24 +765,16 @@ void corto_logprint(
                             if (i) {
                                 corto_logprint(
                                     f, kind, categories, file, line, function, NULL, i + 1, computeSum);
-                                fprintf(
-                                    f,
-                                    "%s%s├>%s %s%s%s\n",
+                                corto_log(
+                                    "%s#[grey]├>#[normal] #[green]%s#[normal]\n",
                                     indent,
-                                    CORTO_GREY,
-                                    CORTO_NORMAL,
-                                    CORTO_MAGENTA,
-                                    data->categories[i],
-                                    CORTO_NORMAL);
+                                    data->categories[i]);
                             } else {
                                 corto_logprint(
                                     f, kind, categories, file, line, function, NULL, i + 1, computeSum);
-                                fprintf(
-                                    f,
-                                    "%s%s%s\n",
-                                    CORTO_MAGENTA,
-                                    data->categories[i],
-                                    CORTO_NORMAL);
+                                corto_log(
+                                    "#[green]%s#[normal]\n",
+                                    data->categories[i]);
                             }
                             data->frames[i].printed = true;
                         }
@@ -820,7 +795,7 @@ void corto_logprint(
             case 'l': ret = corto_logprint_line(cur, line, !corto_log_shouldEmbedCategories); break;
             case 'r': ret = corto_logprint_function(cur, function); break;
             case 'm': ret = corto_logprint_msg(cur, msg); break;
-            case 'a': corto_buffer_append(cur, "%s%s%s", CORTO_CYAN, corto_log_appName, CORTO_NORMAL); break;
+            case 'a': corto_buffer_append(cur, "#[cyan]%s#[normal]", corto_log_appName); break;
             case 'A': ret = corto_logprint_proc(cur); break;
             case 'V': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { corto_logprint_kind(cur, kind); } else { ret = 0; } break;
             case 'F': if (kind >= CORTO_WARNING || kind == CORTO_THROW) { ret = corto_logprint_file(cur, file, FALSE); } else { ret = 0; } break;
@@ -881,29 +856,23 @@ void corto_logprint(
     char *str = corto_buffer_str(&buf);
 
     if (str) {
-        n = strlen(str) + 1;
-        if (n < 80) {
-            n = 80 - n;
-        } else {
-            n = 0;
-        }
-
+        char *colorized = corto_log_colorize(str);
         if (breakAtCategory) {
-            fprintf(f, "%s", str);
+            fprintf(f, "%s", colorized);
         } else {
             if (isTail) {
-                fprintf(f, "%s", str);
-                data->last_printed_len = printlen(str);
+                fprintf(f, "%s", colorized);
+                data->last_printed_len = printlen(colorized);
                 corto_log_resetCursor(data);
             } else {
                 if (msg) {
-                    fprintf(f, "%s\n", str);
+                    fprintf(f, "%s\n", colorized);
                 }
             }
         }
+        free(colorized);
+        free(str);
     }
-
-    corto_dealloc(str);
 }
 
 static
@@ -1207,10 +1176,9 @@ void _corto_log_pop(
                 /* Print everything that preceeds the category */
                 corto_logprint(
                     stderr, CORTO_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
-                fprintf(
-                    stderr,
-                    "%s%s+%s\n", indent, CORTO_GREY, CORTO_NORMAL);
-                free(indent);
+                corto_log(
+                    "%s#[grey]+#[normal]\n", indent ? indent : "");
+                if (indent) free(indent);
             }
         }
 
@@ -1466,7 +1434,7 @@ void corto_throwv_intern(
     corto_log_tlsData *data = corto_getThreadData();
 
     if (data) {
-        categories = corto_log_categoryString(data->categories, true);
+        categories = corto_log_categoryString(data->categories);
     }
 
     if (fmt) {
@@ -1830,5 +1798,13 @@ corto_log_exceptionAction corto_log_setExceptionAction(
 {
     corto_log_exceptionAction result = CORTO_LOG_EXCEPTION_ACTION;
     CORTO_LOG_EXCEPTION_ACTION = action;
+    return result;
+}
+
+bool corto_log_useColors(
+    bool enable)
+{
+    bool result = CORTO_LOG_USE_COLORS;
+    CORTO_LOG_USE_COLORS = enable;
     return result;
 }

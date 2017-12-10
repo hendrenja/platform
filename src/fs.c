@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -213,11 +213,12 @@ int16_t corto_cp_dir(
     const char *src,
     const char *dst)
 {
+    corto_dirstack stack = NULL;
     if (corto_mkdir(dst)) {
         goto error;
     }
 
-    corto_dirstack stack = corto_dirstack_push(NULL, src);
+    stack = corto_dirstack_push(NULL, src);
     if (!stack) {
         goto error;
     }
@@ -248,7 +249,9 @@ int16_t corto_cp_dir(
 
     return 0;
 error:
-    corto_dirstack_pop(stack);
+    if (stack) {
+        corto_dirstack_pop(stack);
+    }
     return -1;
 }
 
@@ -258,18 +261,30 @@ int16_t corto_cp(
 {
     int16_t result;
 
+    char *src_parsed = corto_envparse(src);
+    if (!src_parsed) goto error;
+
+    char *dst_parsed = corto_envparse(dst);
+    if (!dst_parsed) {
+        free(src_parsed);
+        goto error;
+    }
+
     corto_trace("cp '%s' => '%s'", src, dst);
 
     if (!corto_file_test(src)) {
-        corto_throw("source '%s' does not exist", src);
+        corto_throw("source '%s' does not exist", dst_parsed);
         goto error;
     }
 
     if (corto_isdir(src)) {
-        result = corto_cp_dir(src, dst);
+        result = corto_cp_dir(src_parsed, dst_parsed);
     } else {
-        result = corto_cp_file(src, dst);
+        result = corto_cp_file(src_parsed, dst_parsed);
     }
+
+    free(src_parsed);
+    free(dst_parsed);
 
     return result;
 error:
@@ -742,7 +757,7 @@ error:
 const char* corto_dirstack_wd(
     corto_dirstack stack)
 {
-    if (!stack || corto_ll_size(stack) == 1) {
+    if (!stack || corto_ll_count(stack) == 1) {
         return ".";
     }
 
@@ -768,4 +783,3 @@ time_t corto_lastmodified(
 error:
     return -1;
 }
-

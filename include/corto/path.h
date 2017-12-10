@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,16 +37,16 @@ extern "C" {
 /** Create a canonical version of a path.
  * This function reduces a path to its canonical form by resolving . and .. operators.
  * @param str An id buffer in which to store the id. If NULL, a corto-managed
- * string is returned which may change with subsequent calls to corto_fullpath and 
+ * string is returned which may change with subsequent calls to corto_fullpath and
  * other functions that use the corto stringcache.
  *
  * @param path The input path. Can be the same as buffer.
  * @return The path. If buffer is NULL, the returned string is not owned by the application. Otherwise, buffer is returned.
  * @see corto_idof corto_fullname corto_path corto_pathname
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 char* corto_path_clean(
-    char *buf, 
+    char *buf,
     char *path);
 
 /** Get directory name from path.
@@ -57,6 +57,26 @@ char* corto_path_clean(
 CORTO_EXPORT
 char* corto_path_dirname(
     const char *path);
+
+/** Obtain an array with the individual elements of a path.
+ * This function splits up a path using the specified separator. An element with
+ * at least *CORTO_MAX_SCOPE_DEPTH* elements must be provided.
+ *
+ * ```warning
+ * This function modifies the input path.
+ * ```
+ *
+ * @param path The path to be split up.
+ * @param elements The result array with the path elements.
+ * @param sep The separator used to split up the path.
+ * @return The number of elements in the array.
+ * @see corto_idof corto_fullname corto_path corto_pathname
+ */
+CORTO_EXPORT
+int32_t corto_pathToArray(
+    char *path,
+    char *elements[],
+    char *sep);
 
 #ifdef __cplusplus
 }

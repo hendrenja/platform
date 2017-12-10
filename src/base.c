@@ -68,13 +68,6 @@ void base_init(char *appName) {
     }
 
     CORTO_APP_STATUS = 0;
-
-    corto_load_init(
-        corto_getenv("CORTO_TARGET"),
-        corto_getenv("CORTO_HOME"),
-        "/usr/local",
-        corto_getenv("CORTO_VERSION"),
-        NULL);
 }
 
 void base_deinit(void) {

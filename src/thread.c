@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -164,7 +164,7 @@ static int pthread_mutex_timedlock (
     pthread_mutex_t *mutex,
     struct timespec *timeout)
 {
-   corto_time timenow;
+   struct timespec timenow;
    struct timespec sleeptime;
    int retcode;
 
@@ -172,10 +172,10 @@ static int pthread_mutex_timedlock (
    sleeptime.tv_nsec = 10000000; /* 10ms */
 
    while ((retcode = pthread_mutex_trylock (mutex)) == EBUSY) {
-      corto_timeGet (&timenow);
+      timespec_gettime (&timenow);
 
-      if (timenow.sec >= timeout->tv_sec &&
-         (timenow.nanosec * 1000) >= timeout->tv_nsec)
+      if (timenow.tv_sec >= timeout->tv_sec &&
+         (timenow.tv_nsec * 1000) >= timeout->tv_nsec)
       {
           return ETIMEDOUT;
       }

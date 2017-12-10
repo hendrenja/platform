@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,91 +26,91 @@
 extern "C" {
 #endif
 
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_rb corto_rb_new(
     corto_equals_cb compare,
     void *ctx);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_rb_free(
     corto_rb tree);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_find(
-    corto_rb tree, 
+    corto_rb tree,
     void* key);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_findPtr(
-    corto_rb tree, 
+    corto_rb tree,
     void* key);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_rb_set(
-    corto_rb tree, 
-    const void* key, 
+    corto_rb tree,
+    const void* key,
     void* value);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_findOrSet(
-    corto_rb tree, 
-    const void* key, 
+    corto_rb tree,
+    const void* key,
     void* value);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_rb_remove(
-    corto_rb tree, 
+    corto_rb tree,
     void* key);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_rb_hasKey(
-    corto_rb tree, 
-    const void* key, 
+    corto_rb tree,
+    const void* key,
     void** value);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_rb_hasKey_w_cmp(
-    corto_rb tree, 
-    const void* key, 
-    void** value, 
+    corto_rb tree,
+    const void* key,
+    void** value,
     corto_equals_cb cmp);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_min(
-    corto_rb tree, 
+    corto_rb tree,
     void** key_out);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_max(
-    corto_rb tree, 
+    corto_rb tree,
     void** key_out);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_next(
-    corto_rb tree, 
-    void* key, 
+    corto_rb tree,
+    void* key,
     void** key_out);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void* corto_rb_prev(
-    corto_rb tree, 
-    void* key, 
+    corto_rb tree,
+    void* key,
     void** key_out);
 
-CORTO_EXPORT 
-uint32_t corto_rb_size(
+CORTO_EXPORT
+uint32_t corto_rb_count(
     corto_rb tree);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rb_walk(
-    corto_rb tree, 
-    corto_elementWalk_cb callback, 
+    corto_rb tree,
+    corto_elementWalk_cb callback,
     void* userData);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 int corto_rb_walkPtr(
-    corto_rb tree, 
-    corto_elementWalk_cb callback, 
+    corto_rb tree,
+    corto_elementWalk_cb callback,
     void* userData);
 
 #define corto_rb_iter(tree) _corto_rb_iter(tree, alloca(sizeof(struct jsw_rbtrav)));

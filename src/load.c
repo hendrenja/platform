@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -72,12 +72,12 @@ void corto_load_init(
 
     /* Target path - where packages are being built */
     targetPath = corto_envparse(
-        "$CORTO_TARGET/lib/corto/%s",
+        "$BAKE_TARGET/lib/corto/%s",
         version);
 
     /* Home path - where corto is located */
     homePath = corto_envparse(
-        "$CORTO_HOME/lib/corto/%s",
+        "$BAKE_HOME/lib/corto/%s",
         version);
 
     /* Global path - where the global package repository is (all users) */
@@ -88,12 +88,12 @@ void corto_load_init(
 
     /* Precompute base with parameter for lib, etc, include */
     targetBase = corto_envparse(
-        "$CORTO_TARGET/%%s/corto/%s",
+        "$BAKE_TARGET/%%s/corto/%s",
         version);
 
     /* Home path - where corto is located */
     homeBase = corto_envparse(
-        "$CORTO_HOME/%%s/corto/%s",
+        "$BAKE_HOME/%%s/corto/%s",
         version);
 
     /* Global path - where the global package repository is (all users) */
@@ -649,8 +649,8 @@ static char* corto_locatePackageIntern(
         }
     }
 
-    /* Look for packages in CORTO_HOME */
-    if (strcmp(corto_getenv("CORTO_HOME"), corto_getenv("CORTO_TARGET"))) {
+    /* Look for packages in BAKE_HOME */
+    if (strcmp(corto_getenv("BAKE_HOME"), corto_getenv("BAKE_TARGET"))) {
         if (!(homeLib = corto_asprintf("%s/%s", homePath, lib))) {
             goto error;
         }
@@ -679,13 +679,13 @@ static char* corto_locatePackageIntern(
             }
         }
     } else {
-        corto_debug("'%s' already searched ($CORTO_HOME == $CORTO_TARGET)",
-            corto_getenv("CORTO_HOME"));
+        corto_debug("'%s' already searched ($BAKE_HOME == $BAKE_TARGET)",
+            corto_getenv("BAKE_HOME"));
     }
 
     /* Look for global packages */
-    if (strcmp("/usr/local", corto_getenv("CORTO_TARGET")) &&
-        strcmp("/usr/local", corto_getenv("CORTO_HOME"))) {
+    if (strcmp("/usr/local", corto_getenv("BAKE_TARGET")) &&
+        strcmp("/usr/local", corto_getenv("BAKE_HOME"))) {
         if (!(usrLib = corto_asprintf("%s/%s", globalPath, lib))) {
             goto error;
         }
@@ -714,8 +714,8 @@ static char* corto_locatePackageIntern(
             }
         }
     } else {
-        corto_debug("'/usr/local' already searched ($CORTO_HOME='%s' $CORTO_TARGET='%s')",
-            corto_getenv("CORTO_HOME"), corto_getenv("CORTO_TARGET"));
+        corto_debug("'/usr/local' already searched ($BAKE_HOME='%s' $BAKE_TARGET='%s')",
+            corto_getenv("BAKE_HOME"), corto_getenv("BAKE_TARGET"));
     }
 
     if (targetLib && (targetLib != result)) corto_dealloc(targetLib);

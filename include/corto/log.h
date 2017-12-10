@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -106,6 +106,12 @@ corto_log_verbosity corto_log_tailVerbositySet(
  */
 CORTO_EXPORT
 corto_log_verbosity corto_log_tailVerbosityGet(void);
+
+/** Enable or disable colors.
+ */
+CORTO_EXPORT
+bool corto_log_useColors(
+    bool enable);
 
 /** Enable or disable profiling.
  *

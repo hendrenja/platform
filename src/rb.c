@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -60,7 +60,7 @@ bool corto_rb_hasKey_w_cmp(corto_rb tree, const void* key, void** value, corto_e
     return jsw_rbhaskey_w_cmp((jsw_rbtree_t*)tree, key, value, cmp);
 }
 
-uint32_t corto_rb_size(corto_rb tree) {
+uint32_t corto_rb_count(corto_rb tree) {
     return jsw_rbsize((jsw_rbtree_t*)tree);
 }
 

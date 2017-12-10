@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ typedef enum corto_load_locateKind {
  * formatted like any other object identifier, in the form `/foo/bar`. The
  * initial `/` is optional.
  *
- * The function looks in three locations, `$CORTO_HOME`, `$CORTO_TARGET` and
+ * The function looks in three locations, `$BAKE_HOME`, `$BAKE_TARGET` and
  * the global package repository (`/usr/local` on Linux based systems). From
  * these locations `corto_locate` selects the newest version of the package it can
  * find. It also performs a test to ensure that the package has been compiled

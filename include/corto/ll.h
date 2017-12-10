@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017 the corto developers
+/* Copyright (c) 2010-2018 the corto developers
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -92,7 +92,7 @@ CORTO_EXPORT unsigned int corto_ll_hasObject(corto_ll list, void* o);
 CORTO_EXPORT void* corto_ll_last(corto_ll list);
 
 /* Get listsize */
-CORTO_EXPORT int corto_ll_size(corto_ll list);
+CORTO_EXPORT int corto_ll_count(corto_ll list);
 
 /* Obtain regular iterator, not valid outside scope of origin. */
 #define corto_ll_iter(list) _corto_ll_iter(list, alloca(sizeof(corto_ll_iter_s)));
