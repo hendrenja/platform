@@ -33,9 +33,9 @@ static corto_ll loadedAdmin = NULL;
 static corto_ll libraries = NULL;
 
 /* Static variables set during initialization that contain paths to packages */
-static const char *targetEnv, *homeEnv, *globalEnv;
-static const char *targetPath, *homePath, *globalPath;
-static const char *targetBase, *homeBase, *globalBase;
+static const char *targetEnv, *homeEnv;
+static const char *targetPath, *homePath;
+static const char *targetBase, *homeBase;
 static const char *version;
 static const char *corto_library;
 
@@ -60,13 +60,11 @@ struct corto_fileHandler {
 void corto_load_init(
     const char *target,
     const char *home,
-    const char *global,
     const char *v,
     const char *library)
 {
     targetEnv = target;
     homeEnv = home;
-    globalEnv = global;
     version = v;
     corto_library = library;
 
@@ -80,11 +78,6 @@ void corto_load_init(
         "$BAKE_HOME/lib/corto/%s",
         version);
 
-    /* Global path - where the global package repository is (all users) */
-    globalPath = corto_envparse(
-        "/usr/local/lib/corto/%s",
-        version);
-
 
     /* Precompute base with parameter for lib, etc, include */
     targetBase = corto_envparse(
@@ -94,11 +87,6 @@ void corto_load_init(
     /* Home path - where corto is located */
     homeBase = corto_envparse(
         "$BAKE_HOME/%%s/corto/%s",
-        version);
-
-    /* Global path - where the global package repository is (all users) */
-    globalBase = corto_envparse(
-        "/usr/local/%%s/corto/%s",
         version);
 }
 
@@ -493,7 +481,7 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
         corto_id extPackage;
         sprintf(extPackage, "driver/ext/%s", ext);
         corto_mutex_unlock(&corto_load_lock);
-        if (corto_load(extPackage, 0, NULL)) {
+        if (corto_use(extPackage, 0, NULL)) {
             if (!try) {
                 corto_throw(
                     "unable to load file '%s' with extension '%s'",
@@ -574,7 +562,7 @@ error:
 }
 
 /* Load a package */
-int corto_load(char* str, int argc, char* argv[]) {
+int corto_use(char* str, int argc, char* argv[]) {
     return corto_load_intern(str, argc, argv, FALSE, FALSE, FALSE);
 }
 
@@ -609,10 +597,9 @@ static char* corto_locatePackageIntern(
     corto_dl *dl_out,
     bool isLibrary)
 {
-    char *targetLib = NULL, *homeLib = NULL, *usrLib = NULL;
+    char *targetLib = NULL, *homeLib = NULL;
     char *result = NULL;
-    char *targetBuild = NULL, *homeBuild = NULL, *usrBuild = NULL;
-    //char *targetErr = NULL, *homeErr = NULL, *usrErr = NULL;
+    char *targetBuild = NULL, *homeBuild = NULL;
     char *details = NULL;
     bool fileError = FALSE;
     corto_dl dl = NULL;
@@ -621,7 +608,6 @@ static char* corto_locatePackageIntern(
 
     corto_assert(targetPath != NULL, "targetPath is not set");
     corto_assert(homePath != NULL, "homePath is not set");
-    corto_assert(globalPath != NULL, "globalPath is not set");
 
     corto_log_push(strarg("locate:%s", lib));
 
@@ -683,44 +669,8 @@ static char* corto_locatePackageIntern(
             corto_getenv("BAKE_HOME"));
     }
 
-    /* Look for global packages */
-    if (strcmp("/usr/local", corto_getenv("BAKE_TARGET")) &&
-        strcmp("/usr/local", corto_getenv("BAKE_HOME"))) {
-        if (!(usrLib = corto_asprintf("%s/%s", globalPath, lib))) {
-            goto error;
-        }
-        if ((ret = corto_file_test(usrLib)) == 1) {
-            time_t myT = corto_getModified(usrLib);
-            corto_debug("found '%s'", lib);
-            if ((myT >= t) || !result) {
-                if (!isLibrary || corto_checkLibrary(usrLib, &usrBuild, &dl)) {
-                    t = myT;
-                    result = usrLib;
-                    if (base) {
-                        *base = (char*)globalBase;
-                    }
-                } else {
-                    corto_catch();
-                    // corto_queue_raise();
-                }
-            } else if (!result) {
-                corto_debug("discarding '%s' because '%s' is newer", usrLib, result);
-            }
-        } else {
-            if (ret == -1) {
-                // corto_queue_raise();
-            } else {
-                corto_debug("'%s' not found", usrLib);
-            }
-        }
-    } else {
-        corto_debug("'/usr/local' already searched ($BAKE_HOME='%s' $BAKE_TARGET='%s')",
-            corto_getenv("BAKE_HOME"), corto_getenv("BAKE_TARGET"));
-    }
-
     if (targetLib && (targetLib != result)) corto_dealloc(targetLib);
     if (homeLib && (homeLib != result)) corto_dealloc(homeLib);
-    if (usrLib && (usrLib != result)) corto_dealloc(usrLib);
 
     /* TODO: If there is a problem with one of the environments, don't load package */
     /*if (corto_thrown()) {
@@ -1009,7 +959,7 @@ int corto_loadPackages(void) {
     if (packages) {
         corto_iter iter = corto_ll_iter(packages);
         while (corto_iter_hasNext(&iter)) {
-            corto_load(corto_iter_next(&iter), 0, NULL);
+            corto_use(corto_iter_next(&iter), 0, NULL);
         }
         corto_loadFreePackages(packages);
     }
@@ -1077,7 +1027,7 @@ void corto_loaderOnExit(void* ctx) {
 }
 
 #else
-int corto_load(char* str) {
+int corto_use(char* str) {
     CORTO_UNUSED(str);
     corto_error("corto build doesn't include loader");
     return -1;

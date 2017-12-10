@@ -29,17 +29,17 @@ extern "C" {
 typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData);
 
 /** Load a resource.
- * The corto_load function provides a single interface to loading files or
+ * The corto_use function provides a single interface to loading files or
  * packages into corto. The function accepts any filetype known to corto (types
  * are registered as packages in the driver/ext scope).
  *
  * When a provided resource identifier contains a '.', the string after the '.'
- * is treated as a file extension, and `corto_load` will treat the identifier as
+ * is treated as a file extension, and `corto_use` will treat the identifier as
  * a filename. If the identifier contains multiple dots, the last dot will be
  * used to extract the extension.
  *
- * If the identifier contains no dots, `corto_load` will treat the identifier as
- * a logical package name. In this case, `corto_load` will use `corto_locate` to
+ * If the identifier contains no dots, `corto_use` will treat the identifier as
+ * a logical package name. In this case, `corto_use` will use `corto_locate` to
  * find the package image. Each identifier will only be looked up once, after
  * which the result is cached.
  *
@@ -63,13 +63,13 @@ typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData)
  * @see corto_locate corto_load_register
  */
 CORTO_EXPORT
-int corto_load(
+int corto_use(
     char *identifier,
     int argc,
     char *argv[]);
 
 /** Execute a resource.
- * The same as corto_load, but with the difference that each time corto_run is
+ * The same as corto_use, but with the difference that each time corto_run is
  * ran, the cortomain routine (or equivalent) of the resource is invoked.
  *
  * @param identifier The resource identifier (either a file or a package)
@@ -115,7 +115,7 @@ typedef enum corto_load_locateKind {
  * are running, these applications will have to be restarted to see the new
  * package if it is in a different location.
  *
- * If the package has already been loaded by `corto_load` or equivalent function,
+ * If the package has already been loaded by `corto_use` or equivalent function,
  * the function returns a pointer to the library object through the `dl_out`
  * parameter.
  *
@@ -209,7 +209,6 @@ CORTO_EXPORT
 void corto_load_init(
     const char *target,
     const char *home,
-    const char *global,
     const char *version,
     const char *library);
 

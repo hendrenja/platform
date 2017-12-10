@@ -1058,7 +1058,7 @@ void corto_log_setError(
         data->exceptionFrames[0].frames[0].file = strdup(file);
         data->exceptionFrames[0].frames[0].function = strdup(function);
         data->exceptionFrames[0].frames[0].line = line;
-        data->exceptionFrames[0].frames[0].error = strdup(error);
+        data->exceptionFrames[0].frames[0].error = error ? strdup(error) : NULL;
         data->exceptionFrames[0].frames[0].thrown = true;
         data->exceptionFrames[0].sp = 1;
 
@@ -1090,7 +1090,7 @@ void corto_log_setError(
             frame->frames[frame->sp].file = strdup(file);
             frame->frames[frame->sp].function = strdup(function);
             frame->frames[frame->sp].line = line;
-            frame->frames[frame->sp].error = strdup(error);
+            frame->frames[frame->sp].error = error ? strdup(error) : NULL;
             frame->frames[frame->sp].thrown = true;
             frame->sp ++;
         }
