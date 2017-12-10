@@ -913,13 +913,20 @@ void corto_raise_codeframe(
 
     char *str = corto_buffer_str(buf);
     if (str) {
+        char *prefix = NULL;
         if (codeframe->thrown && !first) {
-            corto_log("     #[red]from#[normal]%s\n", str);
+            prefix = "     #[red]from#[normal]";
         } else if (first) {
-            corto_log("#[red]exception#[normal]%s\n", str);
+            prefix = "#[red]exception#[normal]";
         } else {
-            corto_log("    #[red]after#[normal]%s\n", str);
+            prefix = "    #[red]after#[normal]";
         }
+
+        char *colorPrefix = corto_log_colorize(prefix);
+        char *colorStr = corto_log_colorize(str);
+        fprintf(stderr, "%s%s\n", colorPrefix, colorStr);
+        free(colorStr);
+        free(colorPrefix);
         free(str);
     }
 
