@@ -964,11 +964,15 @@ bool corto_raise_intern(
             frame->sp = 0;
         }
 
-        char *procStr = corto_log_colorize(strarg(
+        /* Can't use strarg here, because if an error is raised during exit, the
+         * TLS cache might already have been cleaned up */
+        char *formatted = corto_asprintf(
             "     #[red]proc#[normal] #[grey]%s #[normal][%d]\n\n",
-            corto_log_appName, corto_proc()));
+            corto_log_appName, corto_proc());
+        char *procStr = corto_log_colorize(formatted);
         fprintf(stderr, "%s", procStr);
         free(procStr);
+        free(formatted);
 
         if (clearCategory) {
             data->exceptionCount = 0;
