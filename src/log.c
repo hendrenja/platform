@@ -964,8 +964,11 @@ bool corto_raise_intern(
             frame->sp = 0;
         }
 
-        corto_log("     #[red]proc#[normal] #[grey]%s #[normal][%d]\n\n",
-            corto_log_appName, corto_proc());
+        char *procStr = corto_log_colorize(strarg(
+            "     #[red]proc#[normal] #[grey]%s #[normal][%d]\n\n",
+            corto_log_appName, corto_proc()));
+        fprintf(stderr, "%s", procStr);
+        free(procStr);
 
         if (clearCategory) {
             data->exceptionCount = 0;

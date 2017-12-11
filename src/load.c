@@ -672,14 +672,6 @@ static char* corto_locatePackageIntern(
     if (targetLib && (targetLib != result)) corto_dealloc(targetLib);
     if (homeLib && (homeLib != result)) corto_dealloc(homeLib);
 
-    /* TODO: If there is a problem with one of the environments, don't load package */
-    /*if (corto_thrown()) {
-        if (result) {
-            corto_dealloc(result);
-            result = NULL;
-        }
-    }*/
-
     if (!result) {
         if (details) {
             if (fileError) {
