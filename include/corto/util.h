@@ -54,19 +54,6 @@ extern "C" {
 #define corto_dealloc free
 #define corto_realloc realloc
 
-/* Benchmarking */
-#if 0
-CORTO_EXPORT int corto_benchmark_init(char* name);
-CORTO_EXPORT void corto_benchmark_stop(int id);
-CORTO_EXPORT void corto_benchmark_start(int id);
-CORTO_EXPORT double corto_benchmark_fini(int id);
-#else
-#define corto_benchmark_init(name) (0)
-#define corto_benchmark_stop(id) ((void)(id))
-#define corto_benchmark_start(id) ((void)(id))
-#define corto_benchmark_fini(id) ((void)0)
-#endif
-
 /* Set intern TLS string */
 CORTO_EXPORT char* corto_setThreadString(char* string);
 

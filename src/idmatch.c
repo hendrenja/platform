@@ -280,7 +280,7 @@ int16_t corto_idmatchParseIntern(
                 }
                 *ptr = '\0';
             }
-            break;            
+            break;
         default:
             data->ops[op].token = CORTO_MATCHER_TOKEN_IDENTIFIER;
             while((ch = *ptr++) &&
@@ -415,7 +415,7 @@ int corto_idmatch_scope(
             default:
                 break;
             }
-        }  
+        }
     }
 
     return result;
@@ -642,5 +642,3 @@ void corto_idmatch_free(corto_idmatch_program matcher) {
         corto_dealloc(matcher);
     }
 }
-
-

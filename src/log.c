@@ -1119,7 +1119,8 @@ int _corto_log_push(
 {
     corto_log_tlsData *data = corto_getThreadData();
 
-    corto_assert(data->sp < CORTO_MAX_LOG_CATEGORIES, "cannot push category '%s', max nested categories reached(%d)",
+    corto_assert(data->sp < CORTO_MAX_LOG_CATEGORIES,
+        "cannot push '%s', max nested categories reached(%d)",
         CORTO_MAX_LOG_CATEGORIES);
 
     /* Clear any errors before pushing a new stack */
