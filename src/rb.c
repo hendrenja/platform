@@ -20,7 +20,6 @@
  */
 
 #include <corto/base.h>
-#include <corto/jsw_rbtree.h>
 
 corto_rb corto_rb_new(corto_equals_cb compare, void *ctx) {
     return (corto_rb)jsw_rbnew(ctx, compare);
@@ -39,13 +38,7 @@ void* corto_rb_findPtr(corto_rb tree, void* key) {
 }
 
 void corto_rb_set(corto_rb tree, const void* key, void* value) {
-    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, NULL, TRUE);
-}
-
-void* corto_rb_findOrSet(corto_rb tree, const void* key, void* value) {
-    void *old = NULL;
-    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, &old, FALSE);
-    return old;
+    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, TRUE);
 }
 
 void corto_rb_remove(corto_rb tree, void* key) {

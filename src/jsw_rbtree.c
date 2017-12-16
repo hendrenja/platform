@@ -323,12 +323,9 @@ int jsw_rbhaskey_w_cmp ( jsw_rbtree_t *tree, const void *key, void** data, corto
   0 if the insertion failed for any reason
   </returns>
 */
-int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bool overwrite )
+void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite )
 {
-
-  if (old_out)
-    *old_out = NULL;
-
+  void *result = NULL;
   if ( tree->root == NULL ) {
     /*
       We have an empty tree; attach the
@@ -338,7 +335,7 @@ int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bo
     ++tree->size;
 
     if ( tree->root == NULL )
-      return 0;
+      return NULL;
   }
   else {
     jsw_rbnode_t head = {0, NULL, NULL, {NULL,NULL}}; /* False tree root */
@@ -359,7 +356,7 @@ int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bo
         ++tree->size;
 
         if ( q == NULL )
-          return 0;
+          return NULL;
       }
       else if ( is_red ( q->link[0] ) && is_red ( q->link[1] ) ) {
         /* Simple red violation: color flip */
@@ -385,8 +382,7 @@ int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bo
       int eq = tree->cmp ( tree->ctx, q->key, key );
       if ( eq == 0 ) {
         if (overwrite) q->data = data;
-        if (old_out)
-          *old_out = q->data;
+        result = q->data;
         break;
       }
 
@@ -409,7 +405,7 @@ int jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, void **old_out, bo
   tree->root->red = 0;
 
   tree->changes++;
-  return 1;
+  return result;
 }
 
 /**

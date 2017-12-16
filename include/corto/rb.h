@@ -22,6 +22,8 @@
 #ifndef CORTO_RBTREE_H_
 #define CORTO_RBTREE_H_
 
+#include <corto/jsw_rbtree.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,6 +58,9 @@ void* corto_rb_findOrSet(
     corto_rb tree,
     const void* key,
     void* value);
+
+#define corto_rb_findOrSet(tree, key, value)\
+    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, FALSE)
 
 CORTO_EXPORT
 void corto_rb_remove(

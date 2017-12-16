@@ -750,7 +750,7 @@ void corto_logprint(
                     break;
                 }
 
-                if (!isTail && !corto_log_shouldEmbedCategories) {
+                if (!isTail && !corto_log_shouldEmbedCategories && kind < CORTO_WARNING) {
                     int i = 0;
 
                     while (data->categories[i]) {
@@ -1691,6 +1691,16 @@ bool corto_catch(void)
             corto_frame_free(frame);
         }
         data->exceptionCount = 0;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool corto_raised(void)
+{
+    corto_log_tlsData *data = corto_getThreadData();
+    if (data->exceptionCount) {
         return true;
     } else {
         return false;

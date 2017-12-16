@@ -484,6 +484,12 @@ void corto_throw_detail(
 CORTO_EXPORT
 bool corto_catch(void);
 
+/** Check if exception was raised.
+ * @return true if an exception was raised.
+ */
+CORTO_EXPORT
+bool corto_raised(void);
+
 /** Raise an exception.
  */
 CORTO_EXPORT
