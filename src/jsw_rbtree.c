@@ -323,7 +323,7 @@ int jsw_rbhaskey_w_cmp ( jsw_rbtree_t *tree, const void *key, void** data, corto
   0 if the insertion failed for any reason
   </returns>
 */
-void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite )
+void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite, bool ptr )
 {
   void *result = NULL;
   if ( tree->root == NULL ) {
@@ -336,6 +336,10 @@ void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite )
 
     if ( tree->root == NULL )
       return NULL;
+
+    if (ptr) {
+        result = &tree->root->data;
+    }
   }
   else {
     jsw_rbnode_t head = {0, NULL, NULL, {NULL,NULL}}; /* False tree root */
@@ -382,7 +386,11 @@ void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite )
       int eq = tree->cmp ( tree->ctx, q->key, key );
       if ( eq == 0 ) {
         if (overwrite) q->data = data;
-        result = q->data;
+        if (ptr) {
+            result = &q->data;
+        } else {
+            result = q->data;
+        }
         break;
       }
 
@@ -405,6 +413,7 @@ void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite )
   tree->root->red = 0;
 
   tree->changes++;
+
   return result;
 }
 

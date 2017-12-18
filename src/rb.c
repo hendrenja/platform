@@ -38,7 +38,7 @@ void* corto_rb_findPtr(corto_rb tree, void* key) {
 }
 
 void corto_rb_set(corto_rb tree, const void* key, void* value) {
-    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, TRUE);
+    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, TRUE, FALSE);
 }
 
 void corto_rb_remove(corto_rb tree, void* key) {

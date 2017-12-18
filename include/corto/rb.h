@@ -59,8 +59,16 @@ void* corto_rb_findOrSet(
     const void* key,
     void* value);
 
+CORTO_EXPORT
+void* corto_rb_findOrSetPtr(
+    corto_rb tree,
+    const void* key);
+
 #define corto_rb_findOrSet(tree, key, value)\
-    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, FALSE)
+    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, FALSE, FALSE)
+
+#define corto_rb_findOrSetPtr(tree, key)\
+    jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, NULL, FALSE, TRUE)
 
 CORTO_EXPORT
 void corto_rb_remove(
