@@ -18,7 +18,7 @@ void base_init(char *appName) {
         corto_critical("failed to create mutex for logging framework");
     }
 
-    if (corto_mutex_new(&corto_log_lock)) {
+    if (corto_mutex_new(&corto_load_lock)) {
         corto_critical("failed to create mutex for package loader");
     }
 

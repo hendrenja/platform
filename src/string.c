@@ -248,7 +248,7 @@ char* corto_vasprintf (const char *fmt, va_list args) {
 
     va_copy(tmpa, args);
 
-    size = vsnprintf(NULL, size, fmt, tmpa);
+    size = vsnprintf(result, size, fmt, tmpa);
 
     va_end(tmpa);
 

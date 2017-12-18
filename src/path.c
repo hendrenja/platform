@@ -21,7 +21,8 @@
 
 #include <corto/base.h>
 
-static char *strsep(char **str, char delim) {
+static
+char *__strsep(char **str, char delim) {
     char *result = *str;
     if (result) {
         char *ptr = strchr(result, delim);
@@ -65,7 +66,7 @@ char* corto_path_clean(char *buf, char *path) {
 
     /* tokenization */
     strcpy(work, path);
-    while ((thisp = strsep(&nextp, '/')) != NULL) {
+    while ((thisp = __strsep(&nextp, '/')) != NULL) {
         if (*thisp == '\0') continue;
 
         if (strcmp(thisp, ".") == 0) continue;
@@ -129,4 +130,3 @@ char* corto_path_dirname(
 
     return result;
 }
-

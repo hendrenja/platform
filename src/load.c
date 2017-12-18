@@ -186,7 +186,10 @@ int corto_load_register(char* ext, corto_load_cb handler, void* userData) {
     struct corto_fileHandler* h;
 
     /* Check if extension is already registered */
-    corto_mutex_lock(&corto_load_lock);
+    if (corto_mutex_lock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     if ((h = corto_lookupExt(ext))) {
         if (h->load != handler) {
             corto_error("corto_load_register: extension '%s' is already registered with another loader.", ext);
@@ -206,7 +209,10 @@ int corto_load_register(char* ext, corto_load_cb handler, void* userData) {
         corto_trace("registered file extension '%s'", ext);
         corto_ll_append(fileHandlers, h);
     }
-    corto_mutex_unlock(&corto_load_lock);
+    if (corto_mutex_unlock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     return 0;
 error:
@@ -366,7 +372,10 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
     }
 
     /* Add library to libraries list */
-    corto_mutex_lock (&corto_load_lock);
+    if (corto_mutex_lock (&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     if (!libraries || !corto_ll_hasObject(libraries, dl)) {
         if (!libraries) {
             libraries = corto_ll_new();
@@ -375,7 +384,10 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
         corto_ll_insert(libraries, dl);
         corto_debug("loaded '%s'", fileName);
     }
-    corto_mutex_unlock (&corto_load_lock);
+    if (corto_mutex_unlock (&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     return 0;
 error:
@@ -445,7 +457,10 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
 
     corto_log_push(strarg("load:%s", str));
 
-    corto_mutex_lock(&corto_load_lock);
+    if (corto_mutex_lock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     lib = corto_loadedAdminFind(str);
     if (lib && lib->library) {
         if (lib->loading == corto_thread_self()) {
@@ -466,7 +481,10 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
         }
     }
 
-    corto_mutex_unlock(&corto_load_lock);
+    if (corto_mutex_unlock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     /* Get extension from filename */
     if (!corto_file_extension(str, ext)) {
@@ -474,13 +492,19 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
     }
 
     /* Lookup extension */
-    corto_mutex_lock(&corto_load_lock);
+    if (corto_mutex_lock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     h = corto_lookupExt(ext);
 
     if (!h) {
         corto_id extPackage;
         sprintf(extPackage, "driver/ext/%s", ext);
-        corto_mutex_unlock(&corto_load_lock);
+        if (corto_mutex_unlock(&corto_load_lock)) {
+            corto_throw(NULL);
+            goto error;
+        }
         if (corto_use(extPackage, 0, NULL)) {
             if (!try) {
                 corto_throw(
@@ -491,13 +515,19 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
             }
             result = -1;
         }
-        corto_mutex_lock(&corto_load_lock);
+        if (corto_mutex_lock(&corto_load_lock)) {
+            corto_throw(NULL);
+            goto error;
+        }
         h = corto_lookupExt(ext);
         if (!h) {
             corto_throw(
                 "package 'driver/ext/%s' loaded but extension is not registered",
                 ext);
-            corto_mutex_unlock(&corto_load_lock);
+            if (corto_mutex_unlock(&corto_load_lock)) {
+                corto_throw(NULL);
+                goto error;
+            }
             goto error;
         }
     }
@@ -505,27 +535,42 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
     /* Load file */
     if (!lib) {
         lib = corto_loadedAdminAdd(str);
-        corto_mutex_unlock(&corto_load_lock);
+        if (corto_mutex_unlock(&corto_load_lock)) {
+            corto_throw(NULL);
+            goto error;
+        }
         result = h->load(str, argc, argv, h->userData);
     } else if (lib->filename) {
         if (lib->loading == corto_thread_self()) {
             goto recursive;
         }
-        corto_mutex_unlock(&corto_load_lock);
+        if (corto_mutex_unlock(&corto_load_lock)) {
+            corto_throw(NULL);
+            goto error;
+        }
         lib->loading = corto_thread_self();
         result = corto_loadLibrary(lib->filename, TRUE, &lib->library, argc, argv);
     } else {
-        corto_mutex_unlock(&corto_load_lock);
+        if (corto_mutex_unlock(&corto_load_lock)) {
+            corto_throw(NULL);
+            goto error;
+        }
         corto_throw("'%s' is not a loadable file", lib->name);
         result = -1;
     }
 
-    corto_mutex_lock(&corto_load_lock);
+    if (corto_mutex_lock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     lib->loading = 0;
     lib->result = result;
 
-    corto_mutex_unlock(&corto_load_lock);
+    if (corto_mutex_unlock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     if (!result) {
         corto_ok("loaded '%s'", str[0] == '/' ? &str[1] : str);
@@ -551,7 +596,10 @@ recursive:
         corto_throw_detail(str);
         free(str);
     }
-    corto_mutex_unlock(&corto_load_lock);
+    if (corto_mutex_unlock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     if (ignoreRecursive) {
         corto_log_pop();
         return 0;
@@ -787,13 +835,19 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
         }
 
         if (!loaded->filename && setLoadAdminWhenFound) {
-            corto_mutex_lock(&corto_load_lock);
+            if (corto_mutex_lock(&corto_load_lock)) {
+                corto_throw(NULL);
+                goto error;
+            }
             strset(&loaded->filename, result);
             strset(&loaded->base, base);
             if (dl_out) {
                 loaded->library = dl;
             }
-            corto_mutex_unlock(&corto_load_lock);
+            if (corto_mutex_unlock(&corto_load_lock)) {
+                corto_throw(NULL);
+                goto error;
+            }
         }
 
         switch(kind) {

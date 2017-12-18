@@ -67,17 +67,17 @@ extern "C" {
 #define CORTO_PLATFORM_STRING CORTO_CPU_STRING "-" CORTO_OS_STRING
 
 /* Get hostname of current machine */
-CORTO_EXPORT 
+CORTO_EXPORT
 char* corto_hostname(void);
 
-/** Test whether string matches with current operating system. 
+/** Test whether string matches with current operating system.
  * This function tests for the most common occurances to denotate operating
  * systems and cpu architectures.
  *
  * @param operating system identifier.
  * @return true if matches, false if no match.
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_os_match(char *os);
 
 #ifdef __cplusplus

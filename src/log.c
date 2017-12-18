@@ -151,12 +151,18 @@ corto_log_handler corto_log_handlerRegister(
         result->compiled_category_filter = NULL;
     }
 
-    corto_mutex_lock(&corto_log_lock);
+    if (corto_mutex_lock(&corto_log_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
     if (!corto_log_handlers) {
         corto_log_handlers = corto_ll_new();
     }
     corto_ll_append(corto_log_handlers, result);
-    corto_mutex_unlock(&corto_log_lock);
+    if (corto_mutex_unlock(&corto_log_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
 
     return result;
 error:
@@ -169,13 +175,19 @@ void corto_log_handlerUnregister(
 {
     struct corto_log_handler* callback = cb;
     if (callback) {
-        corto_mutex_lock(&corto_log_lock);
+        if (corto_mutex_lock(&corto_log_lock)) {
+            corto_throw(NULL);
+            corto_raise();
+        }
         corto_ll_remove(corto_log_handlers, callback);
         if (!corto_ll_count(corto_log_handlers)) {
             corto_ll_free(corto_log_handlers);
             corto_log_handlers = NULL;
         }
-        corto_mutex_unlock(&corto_log_lock);
+        if (corto_mutex_unlock(&corto_log_lock)) {
+            corto_throw(NULL);
+            corto_raise();
+        }
 
         if (callback->category_filter) corto_dealloc(callback->category_filter);
         if (callback->auth_token) corto_dealloc(callback->auth_token);
@@ -1320,7 +1332,10 @@ corto_log_verbosity corto_logv(
         }
 
         if (corto_log_handlers) {
-            corto_mutex_lock(&corto_log_lock);
+            if (corto_mutex_lock(&corto_log_lock)) {
+                corto_throw(NULL);
+                corto_raise();
+            }
             if (corto_log_handlers) {
                 corto_iter it = corto_ll_iter(corto_log_handlers);
                 while (corto_iter_hasNext(&it)) {
@@ -1332,7 +1347,10 @@ corto_log_verbosity corto_logv(
                         msgBody);
                 }
             }
-            corto_mutex_unlock(&corto_log_lock);
+            if (corto_mutex_unlock(&corto_log_lock)) {
+                corto_throw(NULL);
+                corto_raise();
+            }
         }
 
         if (alloc) {
