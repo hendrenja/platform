@@ -679,7 +679,7 @@ static char* corto_locatePackageIntern(
         if (ret == -1) {
             // corto_queue_raise();
         } else {
-            corto_debug("%s' not found", targetLib);
+            corto_debug("'%s' not found", targetLib);
         }
     }
 

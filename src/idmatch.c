@@ -421,13 +421,17 @@ int corto_idmatch_scope(
     return result;
 }
 
-bool corto_idmatch_runExpr(corto_idmatchOp **op, char **elements[], corto_idmatchToken precedence) {
+bool corto_idmatch_runExpr(
+    corto_idmatchOp **op,
+    const char **elements[],
+    corto_idmatchToken precedence)
+{
     bool done = FALSE;
     bool result = TRUE;
     bool right = FALSE;
     bool identifierMatched = FALSE;
     corto_idmatchOp *cur;
-    char **start = *elements; // Pointer to array of strings
+    const char **start = *elements; // Pointer to array of strings
 
     do {
         /*printf("eval %s [%s => %s] (prec=%s)\n",
@@ -445,7 +449,7 @@ bool corto_idmatch_runExpr(corto_idmatchOp **op, char **elements[], corto_idmatc
             break;
         case CORTO_MATCHER_TOKEN_IDENTIFIER:
         case CORTO_MATCHER_TOKEN_FILTER: {
-            char *elem = (*elements)[0];
+            const char *elem = (*elements)[0];
             if (elem && (elem[0] != '.')) {
                 result = !fnmatch(cur->start, (*elements)[0], 0);
             } else {
@@ -489,7 +493,7 @@ bool corto_idmatch_runExpr(corto_idmatchOp **op, char **elements[], corto_idmatc
 
             }
 
-            char **elementPtr = *elements, **elementFound = NULL;
+            const char **elementPtr = *elements, **elementFound = NULL;
             right = FALSE;
             if (!elementPtr[0]) {
                 result = TRUE;
@@ -529,7 +533,10 @@ bool corto_idmatch_runExpr(corto_idmatchOp **op, char **elements[], corto_idmatc
     return result;
 }
 
-bool corto_idmatch_run(corto_idmatch_program program, char *str) {
+bool corto_idmatch_run(
+    corto_idmatch_program program,
+    const char *str)
+{
     bool result = FALSE;
 
     if (!program->size) {
@@ -537,9 +544,9 @@ bool corto_idmatch_run(corto_idmatch_program program, char *str) {
     }
 
     if (program->kind == 0) {
-        char *elements[CORTO_MAX_SCOPE_DEPTH + 1];
+        const char *elements[CORTO_MAX_SCOPE_DEPTH + 1];
         corto_idmatchOp *op = program->ops;
-        char **elem = elements;
+        const char **elem = elements;
         corto_id id;
         strcpy(id, str);
         strlower(id);
@@ -570,7 +577,7 @@ bool corto_idmatch_run(corto_idmatch_program program, char *str) {
         result = !strcmp(".", str);
     } else if (program->kind == 3) {
         /* Match any identifier in scope */
-        char *ptr = str;
+        const char *ptr = str;
         if (ptr[0] == '/') ptr ++;
         if (ptr[0] == '.' && !ptr) {
             result = FALSE;
@@ -591,8 +598,11 @@ error:
     return FALSE;
 }
 
-char* corto_matchParent(char *parent, char *expr) {
-    char *parentPtr = parent, *exprPtr = expr;
+const char* corto_matchParent(
+    const char *parent,
+    const char *expr)
+{
+    const char *parentPtr = parent, *exprPtr = expr;
     char parentCh, exprCh;
 
     if (!parent) {
@@ -641,4 +651,19 @@ void corto_idmatch_free(corto_idmatch_program matcher) {
         }
         corto_dealloc(matcher);
     }
+}
+
+bool corto_idmatch(
+    const char *expr,
+    const char *str)
+{
+    struct corto_idmatch_program_s matcher;
+    if (corto_idmatchParseIntern(&matcher, expr, TRUE, TRUE)) {
+        goto error;
+    }
+    bool result = corto_idmatch_run(&matcher, str);
+    corto_dealloc(matcher.tokens);
+    return result;
+error:
+    return FALSE;
 }

@@ -37,10 +37,10 @@ typedef struct corto_idmatch_program_s* corto_idmatch_program;
  * @return true if the identifier matches, false if it does not match
  * @see corto_idmatch_compile corto_idmatch_run corto_idmatch_free
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_idmatch(
-    char *pattern, 
-    char *id);
+    const char *pattern,
+    const char *id);
 
 /** Compile an id expression.
  * When a pattern needs to be evaluated against multiple strings, it is faster
@@ -54,10 +54,10 @@ bool corto_idmatch(
  * @return A compiled version of the string pattern.
  * @see corto_idmatch_run corto_idmatch_free corto_idmatch
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 corto_idmatch_program corto_idmatch_compile(
-    const char *pattern, 
-    bool allowScopes, 
+    const char *pattern,
+    bool allowScopes,
     bool allowSeparators);
 
 /** Run a compiled idmatch program.
@@ -67,10 +67,10 @@ corto_idmatch_program corto_idmatch_compile(
  * @return true if the identifier matches, false if it does not match
  * @see corto_idmatch corto_idmatch_compile corto_idmatch_free
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 bool corto_idmatch_run(
-    corto_idmatch_program program, 
-    char *id);
+    corto_idmatch_program program,
+    const char *id);
 
 /** Return if program matches single object, n objects or a tree of objects.
  *
@@ -92,10 +92,10 @@ int corto_idmatch_scope(
  * @return true if the identifier matches, false if it does not match
  * @see corto_idmatch corto_idmatch_compile corto_idmatch_free
  */
-CORTO_EXPORT 
+CORTO_EXPORT
 void corto_idmatch_free(
     corto_idmatch_program program);
-    
+
 /** Match parent of an object identifier.
  * The corto_idmatch_parent function matches a specified parent identifier with
  * an object identifier. If ther is a match, the functino returns the remainder.
@@ -103,11 +103,11 @@ void corto_idmatch_free(
  * @param parent An object identifier representing a parent
  * @pattern expr An object identifier
  * @return the remainder if the parent matches, NULL if it does not match
- */    
+ */
 CORTO_EXPORT
-char* corto_matchParent(
-    char *parent, 
-    char *expr);
+const char* corto_matchParent(
+    const char *parent,
+    const char *expr);
 
 /** Utility function to test if character is an operator in idmatch expression.
  * Operators are all special characters besides the normal characters that may

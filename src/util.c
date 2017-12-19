@@ -127,7 +127,7 @@ char* corto_itoa(int num, char* buff) {
     return buffptr;
 }
 
-int32_t corto_pathToArray(char *path, char *elements[], char *sep) {
+int32_t corto_pathToArray(char *path, const char *elements[], char *sep) {
     int32_t count = 0;
     char *ptr = path;
 

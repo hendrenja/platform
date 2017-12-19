@@ -75,7 +75,7 @@ char* corto_path_dirname(
 CORTO_EXPORT
 int32_t corto_pathToArray(
     char *path,
-    char *elements[],
+    const char *elements[],
     char *sep);
 
 #ifdef __cplusplus
