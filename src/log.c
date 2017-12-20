@@ -21,6 +21,9 @@
 
 #include <corto/base.h>
 
+#define CORTO_LOG_FILE_LEN (20)
+#define CORTO_MAX_LOG (1024)
+
 /* This global variable is set at startup and a public symbol */
 char *corto_log_appName = "";
 
@@ -106,7 +109,8 @@ struct corto_log_handler {
     corto_log_handler_cb cb;
 };
 
-static corto_log_tlsData* corto_getThreadData(void){
+static
+corto_log_tlsData* corto_getThreadData(void){
     corto_log_tlsData* result;
     if (!CORTO_KEY_LOG) {
         fprintf(
@@ -228,8 +232,6 @@ void corto_err_notifyCallkback(
         }
     }
 }
-
-#define CORTO_MAX_LOG (1024)
 
 void corto_printBacktrace(FILE* f, int nEntries, char** symbols) {
     int i;
@@ -586,8 +588,6 @@ char const* corto_log_stripFunctionName(
         return file;
     }
 }
-
-#define CORTO_LOG_FILE_LEN (20)
 
 static
 int corto_logprint_file(

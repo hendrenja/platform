@@ -132,4 +132,16 @@ CORTO_EXPORT
 bool corto_idmatch_hasOperators(
     const char *expr);
 
+/** Determine whether a pattern matches an object, scope or tree.
+ * Learns from a compiled pattern if it matches a tree (`foo//`), a
+ * scope (`foo/`) or an object (`foo/bar`).
+ *
+ * @param program The program to evaluate
+ * @return CORTO_ON_SELF if matching an object, CORTO_ON_SCOPE if matching a
+ * scope, and CORTO_ON_TREE if matching a tree.
+ */
+CORTO_EXPORT
+int corto_idmatch_get_scope(
+    corto_idmatch_program program);
+
 #endif

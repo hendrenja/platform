@@ -210,15 +210,7 @@ void corto_load_init(
     const char *target,
     const char *home,
     const char *version,
-    const char *library);
-
-
-/* Legacy functions for handling deprecated packages.txt */
-CORTO_EXPORT corto_ll corto_loadGetDependencies(char *file);
-CORTO_EXPORT corto_ll corto_loadGetPackages(void);
-CORTO_EXPORT void corto_loadFreePackages(corto_ll packages);
-CORTO_EXPORT bool corto_loadRequiresPackage(char *package);
-CORTO_EXPORT int corto_loadPackages(void);
+    const char *build);
 
 #ifdef __cplusplus
 }

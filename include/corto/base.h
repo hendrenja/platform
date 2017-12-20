@@ -213,9 +213,9 @@ extern int8_t CORTO_DEBUG_ENABLED;
 #define CORTO_FUNCTION __func__
 
 /* Macro used to prevent type checking macro's from expanding */
-#define ___ 
+#define ___
 /* Macro used to annotate parameters in bootstrap.h */
-#define _(txt) 
+#define _(txt)
 
 /* Corto string representing null */
 #define CORTO_NULL_STRING ("null")
@@ -277,11 +277,11 @@ struct jsw_rbtrav {
 CORTO_EXPORT extern int8_t CORTO_APP_STATUS;
 CORTO_EXPORT extern int8_t CORTO_BACKTRACE_ENABLED;
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void base_init(
   char *appName);
 
-CORTO_EXPORT 
+CORTO_EXPORT
 void base_deinit(void);
 
 #ifdef __cplusplus
@@ -310,5 +310,6 @@ void base_deinit(void);
 #include <corto/jsw_rbtree.h>
 #include <corto/path.h>
 #include <corto/load.h>
+#include <corto/entityadmin.h>
 
 #endif /* CORTO_BASE_H */
