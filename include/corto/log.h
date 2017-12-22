@@ -89,24 +89,6 @@ corto_log_verbosity corto_log_verbositySet(
 CORTO_EXPORT
 corto_log_verbosity corto_log_verbosityGet(void);
 
-/** Set tail verbosity level
- * Tail verbosity allows logging messages of a lower logging level to the end of
- * the console trace that will be overwritten by higher-level logging messages.
- *
- * Tail verbosity level is the same for all threads.
- * @param verbosity Verbosity level.
- */
-CORTO_EXPORT
-corto_log_verbosity corto_log_tailVerbositySet(
-    corto_log_verbosity verbosity);
-
-/** Get tail verbosity level
- * The tail verbosity level is the same for all threads.
- * @return The current tail verbosity level.
- */
-CORTO_EXPORT
-corto_log_verbosity corto_log_tailVerbosityGet(void);
-
 /** Enable or disable colors.
  */
 CORTO_EXPORT
@@ -359,6 +341,16 @@ void _corto_critical(
     const char* fmt,
     ...);
 
+/** Overwrite log if below configured verbosity. */
+CORTO_EXPORT
+void _corto_log_overwrite(
+    char const *file,
+    unsigned int line,
+    char const *function,
+    corto_log_verbosity verbosity,
+    const char *fmt,
+    ...);
+
 /** As corto_debug, but with va_list parameter. */
 CORTO_EXPORT
 void corto_debugv(
@@ -553,9 +545,7 @@ void corto_log_tail(char *str, ...);
 
 #define _SHOULD_PRINT(lvl)\
     corto_log_handlersRegistered() ||\
-    corto_log_verbosityGet() <= lvl ||\
-    corto_log_tailVerbosityGet() <= lvl\
-
+    corto_log_verbosityGet() <= lvl
 
 #define corto_throw(...) _corto_throw(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
 #define corto_throw_fallback(...) _corto_throw_fallback(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__)
@@ -573,6 +563,7 @@ void corto_log_tail(char *str, ...);
 #define corto_trace(...) if(_SHOULD_PRINT(CORTO_TRACE)) { _corto_trace(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #define corto_info(...) if(_SHOULD_PRINT(CORTO_INFO)) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #define corto_ok(...) if(_SHOULD_PRINT(CORTO_OK)) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
+#define corto_log_overwrite(...) _corto_log_overwrite(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)

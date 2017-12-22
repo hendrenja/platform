@@ -21,13 +21,6 @@
 
 #include <corto/base.h>
 
-#ifdef CORTO_LOADER
-
-static corto_dl corto_load_validLibrary(char* fileName, char* *build_out);
-static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]);
-
-void corto_onexit(void(*handler)(void*),void*userData);
-
 static corto_ll fileHandlers = NULL;
 static corto_ll loadedAdmin = NULL;
 static corto_ll libraries = NULL;
@@ -37,8 +30,9 @@ static const char *targetEnv, *homeEnv;
 static const char *targetPath, *homePath;
 static const char *targetBase, *homeBase;
 static const char *version;
-static const char *corto_library;
+static const char *corto_build;
 
+/* Lock protecting the package administration */
 extern corto_mutex_s corto_load_lock;
 
 struct corto_loadedAdmin {
@@ -56,41 +50,23 @@ struct corto_fileHandler {
     void* userData;
 };
 
-/* Initialize paths necessary for loader */
-void corto_load_init(
-    const char *target,
-    const char *home,
-    const char *v,
-    const char *library)
+static
+corto_dl corto_load_validLibrary(
+    char* fileName,
+    char* *build_out);
+
+static
+int corto_load_fromDl(
+    corto_dl dl,
+    char *fileName,
+    int argc,
+    char *argv[]);
+
+static
+char* corto_ptr_castToPath(
+    char* lib,
+    corto_id path)
 {
-    targetEnv = target;
-    homeEnv = home;
-    version = v;
-    corto_library = library;
-
-    /* Target path - where packages are being built */
-    targetPath = corto_envparse(
-        "$BAKE_TARGET/lib/corto/%s",
-        version);
-
-    /* Home path - where corto is located */
-    homePath = corto_envparse(
-        "$BAKE_HOME/lib/corto/%s",
-        version);
-
-
-    /* Precompute base with parameter for lib, etc, include */
-    targetBase = corto_envparse(
-        "$BAKE_TARGET/%%s/corto/%s",
-        version);
-
-    /* Home path - where corto is located */
-    homeBase = corto_envparse(
-        "$BAKE_HOME/%%s/corto/%s",
-        version);
-}
-
-static char* corto_ptr_castToPath(char* lib, corto_id path) {
     char *ptr, *bptr, ch;
     /* Convert '::' in library name to '/' */
     ptr = lib;
@@ -121,7 +97,10 @@ static char* corto_ptr_castToPath(char* lib, corto_id path) {
 }
 
 /* Lookup loaded library by name */
-static struct corto_loadedAdmin* corto_loadedAdminFind(char* name) {
+static
+struct corto_loadedAdmin* corto_loadedAdminFind(
+    char* name)
+{
     if (loadedAdmin) {
         corto_iter iter = corto_ll_iter(loadedAdmin);
         struct corto_loadedAdmin *lib;
@@ -142,7 +121,10 @@ static struct corto_loadedAdmin* corto_loadedAdminFind(char* name) {
 }
 
 /* Add file */
-static struct corto_loadedAdmin* corto_loadedAdminAdd(char* library) {
+static
+struct corto_loadedAdmin* corto_loadedAdminAdd(
+    char* library)
+{
     struct corto_loadedAdmin *lib = corto_calloc(sizeof(struct corto_loadedAdmin));
     lib->name = corto_strdup(library);
     lib->loading = corto_thread_self();
@@ -154,7 +136,11 @@ static struct corto_loadedAdmin* corto_loadedAdminAdd(char* library) {
 }
 
 /* Lookup file handler action */
-static int corto_lookupExtWalk(struct corto_fileHandler* h, struct corto_fileHandler** data) {
+static
+int corto_lookupExtWalk(
+    struct corto_fileHandler* h,
+    struct corto_fileHandler** data)
+{
     if (!strcmp(h->ext, (*data)->ext)) {
         *data = h;
         return 0;
@@ -163,7 +149,10 @@ static int corto_lookupExtWalk(struct corto_fileHandler* h, struct corto_fileHan
 }
 
 /* Lookup file handler */
-static struct corto_fileHandler* corto_lookupExt(char* ext) {
+static
+struct corto_fileHandler* corto_lookupExt(
+    char* ext)
+{
     struct corto_fileHandler dummy, *dummy_p;
 
     dummy.ext = ext;
@@ -181,101 +170,38 @@ static struct corto_fileHandler* corto_lookupExt(char* ext) {
     return dummy_p;
 }
 
-/* Register a filetype */
-int corto_load_register(char* ext, corto_load_cb handler, void* userData) {
-    struct corto_fileHandler* h;
-
-    /* Check if extension is already registered */
-    if (corto_mutex_lock(&corto_load_lock)) {
-        corto_throw(NULL);
-        goto error;
-    }
-    if ((h = corto_lookupExt(ext))) {
-        if (h->load != handler) {
-            corto_error("corto_load_register: extension '%s' is already registered with another loader.", ext);
-            abort();
-            goto error;
-        }
-    } else {
-        h = corto_alloc(sizeof(struct corto_fileHandler));
-        h->ext = ext;
-        h->load = handler;
-        h->userData = userData;
-
-        if (!fileHandlers) {
-            fileHandlers = corto_ll_new();
-        }
-
-        corto_trace("registered file extension '%s'", ext);
-        corto_ll_append(fileHandlers, h);
-    }
-    if (corto_mutex_unlock(&corto_load_lock)) {
-        corto_throw(NULL);
-        goto error;
-    }
-
-    return 0;
-error:
-    return -1;
-}
-
-static char* strreplaceColons(corto_id buffer, char* package) {
-    char ch, *ptr, *bptr;
-    char* fileName, *start;
-
-    fileName = buffer;
-
-    ptr = package;
-    bptr = buffer;
-    start = bptr;
-    while ((ch = *ptr)) {
-        switch (ch) {
-        case ':':
-            ptr++;
-        case '/':
-            if (bptr != start) {
-                *bptr = '/';
-                bptr++;
-            }
-            fileName = bptr;
-            break;
-        default:
-            *bptr = ch;
-            bptr++;
-            break;
-        }
-        ptr++;
-    }
-    *bptr = '\0';
-
-    return fileName;
-}
-
 /* Convert package identifier to filename */
-static char* corto_packageToFile(char* package) {
+static
+char* corto_load_packageToFile(
+    char* package)
+{
     char* path;
-#ifdef CORTO_REDIS
+#ifdef CORTO_STANDALONE_LIB
     path = corto_asprintf("lib%s.so", package[0] == '/' ? package + 1 : package);
     char ch, *ptr;
     for (ptr = path; (ch = *ptr); ptr++) {
         if (ch == '/') *ptr = '_';
     }
 #else
-    char* fileName;
-    int fileNameLength;
-    path = malloc(strlen(package) * 2 + strlen("/lib.so") + 1);
-    fileName = strreplaceColons(path, package);
-    fileNameLength = strlen(fileName);
-    memcpy(fileName + fileNameLength, "/lib", 4);
-    memcpy(fileName + fileNameLength + 4, fileName, fileNameLength);
-    memcpy(fileName + fileNameLength * 2 + 4, ".so\0", 4);
+    char *fileName = strrchr(package, '/');
+    if (fileName) {
+        fileName ++;
+    } else {
+        fileName = package;
+    }
+
+    path = corto_asprintf("%s/lib%s.so", package, fileName);
 #endif
     return path;
 }
 
-static corto_dl corto_load_validLibrary(char* fileName, char **build_out) {
+static
+corto_dl corto_load_validLibrary(
+    char* fileName,
+    char **build_out)
+{
     corto_dl result = NULL;
-    char* ___ (*library)(void);
+    char* ___ (*build)(void);
 
     if (build_out) {
         *build_out = NULL;
@@ -287,18 +213,20 @@ static corto_dl corto_load_validLibrary(char* fileName, char **build_out) {
     }
 
     /* Lookup build function */
-    library = (char* ___ (*)(void))corto_dl_proc(result, "corto_getLibrary");
+    build = (char* ___ (*)(void))corto_dl_proc(result, "corto_get_build");
 
     /* Validate version */
-    if ((corto_library && library && strcmp(corto_library, library())) || (corto_library && !library)) {
-        corto_throw(
-          "corto: library '%s' links with conflicting corto library", fileName);
-        /* Library is linked with different Corto version */
-        if (build_out) {
-            *build_out = corto_strdup(library() ? library() : "???");
+    if (build) {
+        if (corto_build && strcmp(build(), corto_build)) {
+            corto_throw(
+              "corto: library '%s' links with conflicting corto library",
+              fileName);
+
+            if (build_out && build) {
+                *build_out = corto_strdup(build() ? build() : "???");
+            }
+            goto error;
         }
-        goto error;
-    } else if (library) {
         corto_debug("'%s' links with correct corto library", fileName);
     } else {
         corto_trace("found '%s' which doesn't link with corto", fileName);
@@ -313,7 +241,12 @@ error:
     return NULL;
 }
 
-static bool corto_checkLibrary(char* fileName, char **build_out, corto_dl *dl_out) {
+static
+bool corto_library_check(
+    char* fileName,
+    char **build_out,
+    corto_dl *dl_out)
+{
     corto_dl dl = corto_load_validLibrary(fileName, build_out);
 
     bool result = FALSE;
@@ -333,7 +266,13 @@ static bool corto_checkLibrary(char* fileName, char **build_out, corto_dl *dl_ou
 }
 
 /* Load from a dynamic library */
-static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]) {
+static
+int corto_load_fromDl(
+    corto_dl dl,
+    char *fileName,
+    int argc,
+    char *argv[])
+{
     int (*proc)(int argc, char* argv[]);
 
     corto_assert(fileName != NULL, "NULL passed to corto_load_fromDl");
@@ -363,7 +302,7 @@ static int corto_load_fromDl(corto_dl dl, char *fileName, int argc, char *argv[]
         char* ___ (*build)(void);
 
         /* Lookup build function */
-        build = (char* ___ (*)(void))corto_dl_proc(dl, "corto_getBuild");
+        build = (char* ___ (*)(void))corto_dl_proc(dl, "corto_get_build");
         if (build) {
             corto_throw("library '%s' linked with corto but does not have a cortomain",
                 fileName);
@@ -398,12 +337,19 @@ error:
  * Load a Corto library
  * Receives the absolute path to the lib<name>.so file.
  */
-static int corto_loadLibrary(char* fileName, bool validated, corto_dl *dl_out, int argc, char* argv[]) {
+static
+int corto_load_library(
+    char* fileName,
+    bool validated,
+    corto_dl *dl_out,
+    int argc,
+    char* argv[])
+{
     corto_dl dl = NULL;
     char* build = NULL;
     bool used_dlopen = false;
 
-    corto_assert(fileName != NULL, "NULL passed to corto_loadLibrary");
+    corto_assert(fileName != NULL, "NULL passed to corto_load_library");
 
     corto_catch();
     if (!validated) {
@@ -441,15 +387,27 @@ error:
 }
 
 /*
- * An adapter on top of corto_loadLibrary to fit the corto_load_cb signature.
+ * An adapter on top of corto_load_library to fit the corto_load_cb signature.
  */
-int corto_loadLibraryAction(char* file, int argc, char* argv[], void *data) {
+int corto_load_libraryAction(
+    char* file,
+    int argc,
+    char* argv[],
+    void *data)
+{
     CORTO_UNUSED(data);
-    return corto_loadLibrary(file, FALSE, NULL, argc, argv);
+    return corto_load_library(file, FALSE, NULL, argc, argv);
 }
 
 /* Load a package */
-int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRecursive, bool alwaysRun) {
+int corto_load_intern(
+    char* str,
+    int argc,
+    char* argv[],
+    bool try,
+    bool ignoreRecursive,
+    bool alwaysRun)
+{
     char ext[16];
     struct corto_fileHandler* h;
     int result = -1;
@@ -549,14 +507,19 @@ int corto_load_intern(char* str, int argc, char* argv[], bool try, bool ignoreRe
             goto error;
         }
         lib->loading = corto_thread_self();
-        result = corto_loadLibrary(lib->filename, TRUE, &lib->library, argc, argv);
+        result = corto_load_library(lib->filename, TRUE, &lib->library, argc, argv);
     } else {
         if (corto_mutex_unlock(&corto_load_lock)) {
             corto_throw(NULL);
             goto error;
         }
-        corto_throw("'%s' is not a loadable file", lib->name);
-        result = -1;
+        if (!try) {
+            corto_throw("'%s' is not a loadable file", lib->name);
+            result = -1;
+        } else {
+            result = 0;
+            goto loaded;
+        }
     }
 
     if (corto_mutex_lock(&corto_load_lock)) {
@@ -609,37 +572,14 @@ error:
     return -1;
 }
 
-/* Load a package */
-int corto_use(char* str, int argc, char* argv[]) {
-    return corto_load_intern(str, argc, argv, FALSE, FALSE, FALSE);
-}
-
-/* Run a package */
-int corto_run(char* str, int argc, char* argv[]) {
-    return corto_load_intern(str, argc, argv, FALSE, FALSE, TRUE);
-}
-
-/* Try loading a package */
-int corto_load_try(char* str, int argc, char* argv[]) {
-    return corto_load_intern(str, argc, argv, TRUE, FALSE, FALSE);
-}
-
-#ifndef CORTO_REDIS
-static time_t corto_getModified(char* file) {
-    struct stat attr;
-
-    if (stat(file, &attr) < 0) {
-        corto_error("failed to stat '%s' (%s)\n", file, strerror(errno));
-    }
-
-    return attr.st_mtime;
-}
+#ifndef CORTO_STANDALONE_LIB
 
 /* Locate the right environment for a corto package.
  * Input 'foo/bar'
  * Output: '/home/me/.corto/lib/corto/1.1/foo/bar'
  */
-static char* corto_locatePackageIntern(
+static
+char* corto_locate_package(
     char* lib,
     char* *base,
     corto_dl *dl_out,
@@ -663,10 +603,11 @@ static char* corto_locatePackageIntern(
     if (!(targetLib = corto_asprintf("%s/%s", targetPath, lib))) {
         goto error;
     }
+
     if ((ret = corto_file_test(targetLib)) == 1) {
         corto_debug("found '%s'", targetLib);
-        if (!isLibrary || corto_checkLibrary(targetLib, &targetBuild, &dl)) {
-            t = corto_getModified(targetLib);
+        if (!isLibrary || corto_library_check(targetLib, &targetBuild, &dl)) {
+            t = corto_lastmodified(targetLib);
             result = targetLib;
             if (base) {
                 *base = (char*)targetBase;
@@ -679,7 +620,7 @@ static char* corto_locatePackageIntern(
         if (ret == -1) {
             // corto_queue_raise();
         } else {
-            corto_debug("%s' not found", targetLib);
+            corto_debug("'%s' not found", targetLib);
         }
     }
 
@@ -688,11 +629,12 @@ static char* corto_locatePackageIntern(
         if (!(homeLib = corto_asprintf("%s/%s", homePath, lib))) {
             goto error;
         }
+
         if ((ret = corto_file_test(homeLib)) == 1) {
-            time_t myT = corto_getModified(homeLib);
+            time_t myT = corto_lastmodified(homeLib);
             corto_debug("found '%s'", homeLib);
             if ((myT >= t) || !result) {
-                if (!isLibrary || corto_checkLibrary(homeLib, &homeBuild, &dl)) {
+                if (!isLibrary || corto_library_check(homeLib, &homeBuild, &dl)) {
                     t = myT;
                     result = homeLib;
                     if (base) {
@@ -746,32 +688,36 @@ error:
 }
 #endif
 
-char* corto_locateGetName(char* package, corto_load_locateKind kind) {
-    char* result = corto_strdup(package);
-    char* name;
-
+static
+char* corto_locate_getName(
+    char* package,
+    corto_load_locateKind kind)
+{
     if (package[0] == '/') {
-        name = strreplaceColons(result, package + 1);
-    } else if (package[0] == ':') {
-        name = strreplaceColons(result, package + 2);
-    } else {
-        name = strreplaceColons(result, package);
+        package ++;
     }
-
     if (kind == CORTO_LOCATION_NAME) {
-        name = corto_strdup(name);
-        corto_dealloc(result);
-        result = name;
+        char *name = strrchr(package, '/');
+        if (name) {
+            name ++;
+        } else {
+            name = package;
+        }
+        return corto_strdup(name);
+    } else {
+        return corto_strdup(package);
     }
-
-    return result;
 }
 
-char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) {
+char* corto_locate(
+    char* package,
+    corto_dl *dl_out,
+    corto_load_locateKind kind)
+{
     char* relativePath = NULL;
     char* result = NULL;
 
-#ifndef CORTO_REDIS
+#ifndef CORTO_STANDALONE_LIB
     corto_dl dl = NULL;
     char* base = NULL;
     struct corto_loadedAdmin *loaded = NULL;
@@ -785,14 +731,14 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
 #endif
 
     if (!result) {
-        relativePath = corto_packageToFile(package);
+        relativePath = corto_load_packageToFile(package);
         if (!relativePath) {
             goto error;
         }
     }
 
-#ifdef CORTO_REDIS
-    if (!corto_checkLibrary(relativePath, NULL, dl_out)) {
+#ifdef CORTO_STANDALONE_LIB
+    if (!corto_library_check(relativePath, NULL, dl_out)) {
         goto error;
     }
 
@@ -811,7 +757,7 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
     case CORTO_LOCATION_NAME:
     case CORTO_LOCATION_FULLNAME: {
         corto_dealloc(result);
-        result = corto_locateGetName(package, kind);
+        result = corto_locate_getName(package, kind);
         break;
     }
     }
@@ -819,10 +765,10 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
 
     bool setLoadAdminWhenFound = TRUE;
     if (!loaded || (!result && loaded->loading)) {
-        result = corto_locatePackageIntern(relativePath, &base, &dl, TRUE);
+        result = corto_locate_package(relativePath, &base, &dl, TRUE);
         if (!result && (kind == CORTO_LOCATION_ENV)) {
             corto_catch();
-            result = corto_locatePackageIntern(package, &base, &dl, FALSE);
+            result = corto_locate_package(package, &base, &dl, FALSE);
             setLoadAdminWhenFound = FALSE;
         }
     }
@@ -881,7 +827,7 @@ char* corto_locate(char* package, corto_dl *dl_out, corto_load_locateKind kind) 
         }
         case CORTO_LOCATION_NAME:
         case CORTO_LOCATION_FULLNAME: {
-            result = corto_locateGetName(package, kind);
+            result = corto_locate_getName(package, kind);
             break;
         }
         }
@@ -903,7 +849,11 @@ error:
     return NULL;
 }
 
-void* corto_load_sym(char *package, corto_dl *dl_out, char *symbol) {
+void* corto_load_sym(
+    char *package,
+    corto_dl *dl_out,
+    char *symbol)
+{
     void *result = NULL;
 
     if (!*dl_out) {
@@ -938,82 +888,18 @@ void* corto_load_sym(char *package, corto_dl *dl_out, char *symbol) {
     return result;
 }
 
-void(*corto_load_proc(char *package, corto_dl *dl_out, char *symbol))(void) {
+void(*corto_load_proc(char *package, corto_dl *dl_out, char *symbol))(void)
+{
     return (void(*)(void))(uintptr_t)corto_load_sym(package, dl_out, symbol);
 }
 
-corto_ll corto_loadGetDependencies(char* file) {
-    corto_ll result = NULL;
-
-    if (corto_file_test(file)) {
-        corto_id name;
-        result = corto_ll_new();
-        FILE* f = fopen(file, "r");
-        char *dependency;
-        while ((dependency = corto_file_readln(f, name, sizeof(name)))) {
-            corto_ll_append(result, corto_strdup(dependency));
-        }
-        fclose(f);
-    }
-
-    return result;
-}
-
-static void corto_loadFreeDependencies(corto_ll dependencies) {
-    if (dependencies) {
-        corto_iter iter = corto_ll_iter(dependencies);
-        while (corto_iter_hasNext(&iter)) {
-            corto_dealloc(corto_iter_next(&iter));
-        }
-        corto_dealloc(dependencies);
-    }
-}
-
-static bool corto_loadRequiresDependency(corto_ll dependencies, char* query) {
-    bool result = FALSE;
-
-    if (dependencies) {
-        corto_iter iter = corto_ll_iter(dependencies);
-        while (!result && corto_iter_hasNext(&iter)) {
-            char* package = corto_iter_next(&iter);
-            if (!strcmp(package, query)) {
-                result = TRUE;
-            }
-        }
-    }
-
-    return result;
-}
-
-corto_ll corto_loadGetPackages(void) {
-    return corto_loadGetDependencies(".corto/packages.txt");
-}
-
-void corto_loadFreePackages(corto_ll packages) {
-    corto_loadFreeDependencies(packages);
-}
-
-bool corto_loadRequiresPackage(char* package) {
-    corto_ll packages = corto_loadGetPackages();
-    bool result = corto_loadRequiresDependency(packages, package);
-    corto_loadFreePackages(packages);
-    return result;
-}
-
-int corto_loadPackages(void) {
-    corto_ll packages = corto_loadGetPackages();
-    if (packages) {
-        corto_iter iter = corto_ll_iter(packages);
-        while (corto_iter_hasNext(&iter)) {
-            corto_use(corto_iter_next(&iter), 0, NULL);
-        }
-        corto_loadFreePackages(packages);
-    }
-    return 0;
-}
-
 /* Load file with unspecified extension */
-int corto_file_loader(char* package, int argc, char* argv[], void* ctx) {
+int corto_file_loader(
+    char* package,
+    int argc,
+    char* argv[],
+    void* ctx)
+{
     CORTO_UNUSED(ctx);
     char* fileName;
     int result;
@@ -1036,7 +922,9 @@ int corto_file_loader(char* package, int argc, char* argv[], void* ctx) {
     return result;
 }
 
-void corto_loaderOnExit(void* ctx) {
+void corto_loaderOnExit(
+    void* ctx)
+{
     struct corto_fileHandler* h;
     corto_dl dl;
     corto_iter iter;
@@ -1072,10 +960,95 @@ void corto_loaderOnExit(void* ctx) {
     }
 }
 
-#else
-int corto_use(char* str) {
-    CORTO_UNUSED(str);
-    corto_error("corto build doesn't include loader");
+/* Load a package */
+int corto_use(
+    char* str,
+    int argc,
+    char* argv[])
+{
+    return corto_load_intern(str, argc, argv, FALSE, FALSE, FALSE);
+}
+
+/* Run a package */
+int corto_run(
+    char* str,
+    int argc,
+    char* argv[])
+{
+    return corto_load_intern(str, argc, argv, FALSE, FALSE, TRUE);
+}
+
+/* Register a filetype */
+int corto_load_register(
+    char* ext,
+    corto_load_cb handler,
+    void* userData)
+{
+    struct corto_fileHandler* h;
+
+    /* Check if extension is already registered */
+    if (corto_mutex_lock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
+    if ((h = corto_lookupExt(ext))) {
+        if (h->load != handler) {
+            corto_error("corto_load_register: extension '%s' is already registered with another loader.", ext);
+            abort();
+            goto error;
+        }
+    } else {
+        h = corto_alloc(sizeof(struct corto_fileHandler));
+        h->ext = ext;
+        h->load = handler;
+        h->userData = userData;
+
+        if (!fileHandlers) {
+            fileHandlers = corto_ll_new();
+        }
+
+        corto_trace("registered file extension '%s'", ext);
+        corto_ll_append(fileHandlers, h);
+    }
+    if (corto_mutex_unlock(&corto_load_lock)) {
+        corto_throw(NULL);
+        goto error;
+    }
+
+    return 0;
+error:
     return -1;
 }
-#endif
+
+/* Initialize paths necessary for loader */
+void corto_load_init(
+    const char *target,
+    const char *home,
+    const char *v,
+    const char *build)
+{
+    targetEnv = target;
+    homeEnv = home;
+    version = v;
+    corto_build = build;
+
+    /* Target path - where packages are being built */
+    targetPath = corto_envparse(
+        "$BAKE_TARGET/lib/corto/%s",
+        version);
+
+    /* Home path - where corto is located */
+    homePath = corto_envparse(
+        "$BAKE_HOME/lib/corto/%s",
+        version);
+
+    /* Precompute base with parameter for lib, etc, include */
+    targetBase = corto_envparse(
+        "$BAKE_TARGET/%%s/corto/%s",
+        version);
+
+    /* Home path - where corto is located */
+    homeBase = corto_envparse(
+        "$BAKE_HOME/%%s/corto/%s",
+        version);
+}

@@ -57,9 +57,6 @@ extern "C" {
 /* Set intern TLS string */
 CORTO_EXPORT char* corto_setThreadString(char* string);
 
-/* Split path into separate elements. Modifies 'path'. */
-int32_t corto_pathToArray(char *path, char *elements[], char *sep);
-
 #ifdef __cplusplus
 }
 #endif

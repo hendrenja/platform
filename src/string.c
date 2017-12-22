@@ -101,8 +101,9 @@ int tokicmp(char ** const str1, const char *str2, char sep) {
     return result;
 }
 
-char *strelem(char *str) {
-    char *ptr, ch;
+const char *strelem(const char *str) {
+    const char *ptr;
+    char ch;
     for (ptr = str; (ch = *ptr); ptr++) {
         if (ch == '(' || ch == '/') {
             break;
@@ -111,7 +112,7 @@ char *strelem(char *str) {
     return ch ? ptr : NULL;
 }
 
-char *strappend(char *src, char *fmt, ...) {
+char *strappend(char *src, const char *fmt, ...) {
     char buff[1024];
     va_list args;
     unsigned int sourceLength = 0;
