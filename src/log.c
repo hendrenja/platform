@@ -38,7 +38,6 @@ static corto_ll corto_log_handlers;
  * a mutex. Libraries should not invoke functions that touch these, and an
  * application should set them during startup. */
 static corto_log_verbosity CORTO_LOG_LEVEL = CORTO_INFO;
-static corto_log_verbosity CORTO_LOG_TAIL_LEVEL = CORTO_CRITICAL;
 static bool CORTO_LOG_PROFILE = false;
 static corto_log_exceptionAction CORTO_LOG_EXCEPTION_ACTION = 0;
 static char *corto_log_fmt_application;
@@ -338,7 +337,10 @@ size_t printlen(
         len ++;
         if (!*ptr) break;
     }
-    return len;
+    if (ch == 27) {
+        len --; /* If last character was a color code, correct length */
+    }
+    return len + 1;
 }
 
 static
@@ -655,7 +657,7 @@ int corto_logprint_proc(
         "green",
         "yellow",
         "blue",
-        "magenta"
+        "magenta",
         "cyan",
         "white",
         "grey",
@@ -680,15 +682,21 @@ void corto_log_clearLine(
     corto_log_tlsData *data)
 {
     int i;
-    for (i = 0; i < data->last_printed_len; i ++) {
+    for (i = 0; i < data->last_printed_len - 1; i ++) {
         fprintf(stderr, " ");
+        //corto_sleep(0, 10000000);
     }
-    for (i = 0; i < data->last_printed_len; i ++) {
+    for (i = 0; i < data->last_printed_len - 1; i ++) {
+        //corto_sleep(0, 50000000);
         fprintf(stderr, "\b");
     }
+    //printf("len = %d\n", data->last_printed_len);
     data->last_printed_len = 0;
 
 }
+
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxto/libcoro.so' (changed)
 
 static
 void corto_logprint(
@@ -1301,12 +1309,13 @@ corto_log_verbosity corto_logv(
     unsigned int level,
     const char *fmt,
     va_list arg,
-    FILE* f)
+    FILE* f,
+    bool overwrite)
 {
     corto_log_tlsData *data = corto_getThreadData();
     corto_raise_intern(data, false);
 
-    if (kind >= CORTO_LOG_LEVEL || kind >= CORTO_LOG_TAIL_LEVEL || corto_log_handlers) {
+    if (kind >= CORTO_LOG_LEVEL || (overwrite && (CORTO_LOG_LEVEL - kind == 1)) || corto_log_handlers) {
         char* alloc = NULL;
         char buff[CORTO_MAX_LOG + 1];
         char *categories[CORTO_MAX_LOG_CATEGORIES];
@@ -1327,7 +1336,7 @@ corto_log_verbosity corto_logv(
 
         msgBody = corto_log_parseComponents(categories, msg);
 
-        if (kind >= CORTO_LOG_LEVEL || kind >= CORTO_LOG_TAIL_LEVEL) {
+        if (kind >= CORTO_LOG_LEVEL || overwrite) {
             corto_logprint(f, kind, categories, file, line, function, msgBody, FALSE, FALSE);
         }
 
@@ -1372,7 +1381,7 @@ void _corto_assertv(
     va_list args)
 {
     if (!condition) {
-        corto_logv(file, line, function, CORTO_ASSERT, 0, fmt, args, stderr);
+        corto_logv(file, line, function, CORTO_ASSERT, 0, fmt, args, stderr, false);
         corto_backtrace(stderr);
         abort();
     }
@@ -1385,7 +1394,7 @@ void corto_criticalv(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_CRITICAL, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_CRITICAL, 0, fmt, args, stderr, false);
     corto_backtrace(stderr);
     fflush(stderr);
     abort();
@@ -1398,7 +1407,7 @@ void corto_debugv(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_DEBUG, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_DEBUG, 0, fmt, args, stderr, false);
 }
 
 void corto_tracev(
@@ -1408,7 +1417,7 @@ void corto_tracev(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_TRACE, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_TRACE, 0, fmt, args, stderr, false);
 }
 
 void corto_warningv(
@@ -1418,7 +1427,7 @@ void corto_warningv(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_WARNING, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_WARNING, 0, fmt, args, stderr, false);
 }
 
 void corto_errorv(
@@ -1428,7 +1437,7 @@ void corto_errorv(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_ERROR, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_ERROR, 0, fmt, args, stderr, false);
     if (CORTO_BACKTRACE_ENABLED || (corto_log_verbosityGet() == CORTO_DEBUG)) {
         corto_backtrace(stderr);
     }
@@ -1441,7 +1450,7 @@ void corto_okv(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_OK, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_OK, 0, fmt, args, stderr, false);
 }
 
 void corto_infov(
@@ -1451,7 +1460,18 @@ void corto_infov(
     const char *fmt,
     va_list args)
 {
-    corto_logv(file, line, function, CORTO_INFO, 0, fmt, args, stderr);
+    corto_logv(file, line, function, CORTO_INFO, 0, fmt, args, stderr, false);
+}
+
+void _corto_log_overwritev(
+    char const *file,
+    unsigned int line,
+    char const *function,
+    corto_log_verbosity verbosity,
+    const char *fmt,
+    va_list args)
+{
+    corto_logv(file, line, function, verbosity, 0, fmt, args, stderr, true);
 }
 
 static
@@ -1644,6 +1664,21 @@ void _corto_assert(
     va_end(arglist);
 }
 
+void _corto_log_overwrite(
+    char const *file,
+    unsigned int line,
+    char const *function,
+    corto_log_verbosity verbosity,
+    const char *fmt,
+    ...)
+{
+    va_list arglist;
+
+    va_start(arglist, fmt);
+    _corto_log_overwritev(file, line, function, verbosity, fmt, arglist);
+    va_end(arglist);
+}
+
 char* corto_lastinfo(void) {
     return corto_getLastInfo();
 }
@@ -1763,21 +1798,8 @@ corto_log_verbosity corto_log_verbositySet(
     return old;
 }
 
-corto_log_verbosity corto_log_tailVerbositySet(
-    corto_log_verbosity level)
-{
-    corto_log_verbosity old = CORTO_LOG_LEVEL;
-    corto_setenv("CORTO_TAIL_VERBOSITY", corto_log_levelToStr(level));
-    CORTO_LOG_TAIL_LEVEL = level;
-    return old;
-}
-
 corto_log_verbosity corto_log_verbosityGet() {
     return CORTO_LOG_LEVEL;
-}
-
-corto_log_verbosity corto_log_tailVerbosityGet() {
-    return CORTO_LOG_TAIL_LEVEL;
 }
 
 void corto_log_embedCategories(

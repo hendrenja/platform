@@ -513,8 +513,13 @@ int corto_load_intern(
             corto_throw(NULL);
             goto error;
         }
-        corto_throw("'%s' is not a loadable file", lib->name);
-        result = -1;
+        if (!try) {
+            corto_throw("'%s' is not a loadable file", lib->name);
+            result = -1;
+        } else {
+            result = 0;
+            goto loaded;
+        }
     }
 
     if (corto_mutex_lock(&corto_load_lock)) {
