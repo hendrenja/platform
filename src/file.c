@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 static 
 void printError(

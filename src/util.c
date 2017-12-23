@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 extern corto_tls CORTO_KEY_THREAD_STRING;
 

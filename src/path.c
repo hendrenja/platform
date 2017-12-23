@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 static
 char *__strsep(char **str, char delim) {

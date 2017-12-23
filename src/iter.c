@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 int corto_iter_hasNext(corto_iter* iter) {
     if (iter->hasNext) {

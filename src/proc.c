@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 corto_proc corto_proc_run(const char* exec, char *argv[]) {
     pid_t pid = fork();

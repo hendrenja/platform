@@ -22,7 +22,7 @@
 /* Free all entityscriptoins, but do not free corto_entityAdmin itself so
  * it can be reused when a thread needs to copy global entities */
 
-#include <corto/entityadmin.h>
+#include <corto/platform.h>
 
 static
 void corto_entityAdmin_freeEntities(

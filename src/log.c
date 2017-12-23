@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 #define CORTO_LOG_FILE_LEN (20)
 #define CORTO_MAX_LOG (1024)

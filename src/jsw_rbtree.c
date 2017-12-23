@@ -29,7 +29,7 @@
     > Modified (Sander Mertens): 2010 - 2017
 */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 #ifdef __cplusplus
 #include <cstdlib>

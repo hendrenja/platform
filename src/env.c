@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 int16_t corto_setenv(const char *varname, const char *value, ...) {
     if (value) {

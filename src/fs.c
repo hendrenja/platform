@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+
 #include "idmatch.h"
 
 int corto_touch(const char *file) {

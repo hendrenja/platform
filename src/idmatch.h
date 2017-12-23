@@ -22,7 +22,7 @@
 #ifndef CORTO__MATCHER_H_
 #define CORTO__MATCHER_H_
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 typedef enum corto_idmatchToken {
     CORTO_MATCHER_TOKEN_NONE,

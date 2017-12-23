@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 /* Add an extra element to the buffer */
 static void corto_buffer_grow(corto_buffer *b) {

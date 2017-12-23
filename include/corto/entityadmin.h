@@ -22,7 +22,7 @@
 #ifndef CORTO_ENTITYADMIN_H_
 #define CORTO_ENTITYADMIN_H_
 
-#include <corto/base.h>
+
 
 typedef
 int (*corto_entityWalkAction)(

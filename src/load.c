@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 static corto_ll fileHandlers = NULL;
 static corto_ll loadedAdmin = NULL;

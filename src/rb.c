@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+#include <corto/platform.h>
 
 corto_rb corto_rb_new(corto_equals_cb compare, void *ctx) {
     return (corto_rb)jsw_rbnew(ctx, compare);

@@ -19,7 +19,7 @@
  * THE SOFTWARE.
  */
 
-#include <corto/base.h>
+
 #include "idmatch.h"
 
 static char* corto_idmatchTokenStr(corto_idmatchToken t) {
