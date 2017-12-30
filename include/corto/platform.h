@@ -282,7 +282,7 @@ void platform_init(
   char *appName);
 
 CORTO_EXPORT
-void base_deinit(void);
+void platform_deinit(void);
 
 #ifdef __cplusplus
 }

@@ -142,7 +142,7 @@ void* _corto_tls_get(
  * mainthread. To ensure that there are no memory leaks, call this function
  * before exitting the application to ensure memory logs are clean.
  *
- * The base_deinit function calls this function.
+ * The platform_deinit function calls this function.
  */
 CORTO_EXPORT
 void corto_tls_free(void);

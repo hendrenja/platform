@@ -70,6 +70,6 @@ void platform_init(char *appName) {
     CORTO_APP_STATUS = 0;
 }
 
-void base_deinit(void) {
+void platform_deinit(void) {
     corto_tls_free();
 }
