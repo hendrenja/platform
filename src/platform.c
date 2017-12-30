@@ -11,7 +11,7 @@ extern char *corto_log_appName;
 
 corto_tls CORTO_KEY_THREAD_STRING;
 
-void base_init(char *appName) {
+void platform_init(char *appName) {
     corto_log_appName = appName;
 
     if (corto_mutex_new(&corto_log_lock)) {

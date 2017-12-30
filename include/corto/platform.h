@@ -278,7 +278,7 @@ CORTO_EXPORT extern int8_t CORTO_APP_STATUS;
 CORTO_EXPORT extern int8_t CORTO_BACKTRACE_ENABLED;
 
 CORTO_EXPORT
-void base_init(
+void platform_init(
   char *appName);
 
 CORTO_EXPORT
