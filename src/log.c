@@ -1479,7 +1479,7 @@ void corto_throwv_intern(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt,
+    const char *fmt,
     va_list args,
     bool raiseUnreported)
 {
@@ -1515,7 +1515,7 @@ void corto_throwv(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt,
+    const char *fmt,
     va_list args)
 {
     corto_throwv_intern(file, line, function, fmt, args, TRUE);
@@ -1687,7 +1687,7 @@ void _corto_throw(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt,
+    const char *fmt,
     ...)
 {
     va_list arglist;
@@ -1701,7 +1701,7 @@ void _corto_throw_fallback(
     char const *file,
     unsigned int line,
     char const *function,
-    char *fmt,
+    const char *fmt,
     ...)
 {
     va_list arglist;

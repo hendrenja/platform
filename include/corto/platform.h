@@ -212,8 +212,9 @@ extern int8_t CORTO_DEBUG_ENABLED;
 
 #define CORTO_FUNCTION __func__
 
-/* Macro used to prevent type checking macro's from expanding */
+/* Macro's used to prevent type checking macro's from expanding */
 #define ___
+
 /* Macro used to annotate parameters in bootstrap.h */
 #define _(txt)
 

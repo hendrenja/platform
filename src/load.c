@@ -304,9 +304,9 @@ int corto_load_fromDl(
         /* Lookup build function */
         build = (char* ___ (*)(void))corto_dl_proc(dl, "corto_get_build");
         if (build) {
-            corto_throw("library '%s' linked with corto but does not have a cortomain",
+            corto_trace(
+                "library '%s' linked with corto but does not have a cortomain",
                 fileName);
-            goto error;
         }
     }
 
