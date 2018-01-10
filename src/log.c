@@ -1131,98 +1131,6 @@ void corto_log_setError(
     }
 }
 
-int _corto_log_push(
-    char const *file,
-    unsigned int line,
-    char const *function,
-    const char *category)
-{
-    corto_log_tlsData *data = corto_getThreadData();
-
-    corto_assert(data->sp < CORTO_MAX_LOG_CATEGORIES,
-        "cannot push '%s', max nested categories reached(%d)",
-        CORTO_MAX_LOG_CATEGORIES);
-
-    /* Clear any errors before pushing a new stack */
-    corto_raise_intern(data, false);
-
-    corto_log_frame *frame = &data->frames[data->sp];
-
-    frame->category = category ? strdup(category) : NULL;
-    data->categories[data->sp] = frame->category;
-    frame->count = 0;
-    frame->printed = false;
-    frame->initial.file = strdup(corto_log_stripFunctionName(file));
-    frame->initial.function = strdup(function);
-    frame->initial.line = line;
-    frame->initial.thrown = false;
-    frame->sp = 0;
-    timespec_gettime(&frame->lastTime);
-
-    if (data->sp) {
-        data->frames[data->sp - 1].count ++;
-    }
-
-    data->sp ++;
-
-    return -1;
-}
-
-void _corto_log_pop(
-    char const *file,
-    unsigned int line,
-    char const *function)
-{
-    corto_log_tlsData *data = corto_getThreadData();
-    bool printed = false;
-
-    if (data->sp) {
-        corto_log_frame *frame = &data->frames[data->sp - 1];
-
-        if (!frame->printed && CORTO_LOG_PROFILE) {
-            printed = true;
-            corto_logprint(
-                stderr, CORTO_INFO, NULL, file, line, function, NULL, FALSE, TRUE);
-        }
-
-        if (strcmp(frame->initial.function, function)) {
-            corto_warning_fl(
-                file,
-                line,
-                "log_pop called in '%s' but matching log_push in '%s'",
-                function, frame->initial.function);
-        }
-
-        if (frame->initial.file) free(frame->initial.file);
-        if (frame->initial.function) free(frame->initial.function);
-        if (frame->category) free(frame->category);
-        frame->sp = 0;
-
-        data->frames[data->sp - 1].count += data->frames[data->sp].count;
-        data->categories[data->sp - 1] = NULL;
-
-        /* If categories are not embedded in log message, they are displayed in
-         * a hierarchical view */
-        if (!corto_log_shouldEmbedCategories && !data->exceptionCount) {
-
-            /* Only print close if messages were logged for category */
-            if (frame->printed && !printed) {
-                char *indent = corto_log_categoryIndent(data->categories, 0);
-                /* Print everything that preceeds the category */
-                corto_logprint(
-                    stderr, CORTO_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
-                corto_log(
-                    "%s#[grey]+#[normal]\n", indent ? indent : "");
-                if (indent) free(indent);
-            }
-        }
-
-        data->sp --;
-    } else {
-        corto_critical_fl(file, line, "corto_log_pop called more times than corto_log_push");
-    }
-}
-
 static
 void corto_setLastMessage(
     char* err)
@@ -1370,6 +1278,103 @@ corto_log_verbosity corto_logv(
     corto_catch();
 
     return kind;
+}
+
+int _corto_log_push(
+    char const *file,
+    unsigned int line,
+    char const *function,
+    const char *category)
+{
+    corto_log_tlsData *data = corto_getThreadData();
+
+    corto_assert(data->sp < CORTO_MAX_LOG_CATEGORIES,
+        "cannot push '%s', max nested categories reached(%d)",
+        CORTO_MAX_LOG_CATEGORIES);
+
+    /* Clear any errors before pushing a new stack */
+    corto_raise_intern(data, false);
+
+    corto_log_frame *frame = &data->frames[data->sp];
+
+    frame->category = category ? strdup(category) : NULL;
+    data->categories[data->sp] = frame->category;
+    frame->count = 0;
+    frame->printed = false;
+    frame->initial.file = strdup(corto_log_stripFunctionName(file));
+    frame->initial.function = strdup(function);
+    frame->initial.line = line;
+    frame->initial.thrown = false;
+    frame->sp = 0;
+    timespec_gettime(&frame->lastTime);
+
+    if (data->sp) {
+        data->frames[data->sp - 1].count ++;
+    }
+
+    data->sp ++;
+
+    return -1;
+}
+
+void _corto_log_pop(
+    char const *file,
+    unsigned int line,
+    char const *function)
+{
+    corto_log_tlsData *data = corto_getThreadData();
+    bool printed = false;
+
+    if (data->sp) {
+        corto_log_frame *frame = &data->frames[data->sp - 1];
+
+        if (!frame->printed && CORTO_LOG_PROFILE) {
+            printed = true;
+            corto_logprint(
+                stderr, CORTO_INFO, NULL, file, line, function, NULL, FALSE, TRUE);
+        }
+
+        if (strcmp(frame->initial.function, function)) {
+            corto_logv(
+                file,
+                line,
+                function,
+                CORTO_TRACE,
+                0,
+                strarg("log_pop called in '%s' but matching log_push in '%s'", function, frame->initial.function),
+                NULL,
+                stderr,
+                false);
+        }
+
+        if (frame->initial.file) free(frame->initial.file);
+        if (frame->initial.function) free(frame->initial.function);
+        if (frame->category) free(frame->category);
+        frame->sp = 0;
+
+        data->frames[data->sp - 1].count += data->frames[data->sp].count;
+        data->categories[data->sp - 1] = NULL;
+
+        /* If categories are not embedded in log message, they are displayed in
+         * a hierarchical view */
+        if (!corto_log_shouldEmbedCategories && !data->exceptionCount) {
+
+            /* Only print close if messages were logged for category */
+            if (frame->printed && !printed) {
+                char *indent = corto_log_categoryIndent(data->categories, 0);
+                /* Print everything that preceeds the category */
+                corto_logprint(
+                    stderr, CORTO_INFO, data->categories, file, line, NULL, NULL, TRUE, TRUE);
+                corto_log(
+                    "%s#[grey]+#[normal]\n", indent ? indent : "");
+                if (indent) free(indent);
+            }
+        }
+
+        data->sp --;
+    } else {
+        corto_critical_fl(file, line, "corto_log_pop called more times than corto_log_push");
+    }
 }
 
 void _corto_assertv(

@@ -64,7 +64,7 @@ typedef int (*corto_load_cb)(char *file, int argc, char* argv[], void* userData)
  */
 CORTO_EXPORT
 int corto_use(
-    char *identifier,
+    const char *identifier,
     int argc,
     char *argv[]);
 
@@ -80,7 +80,7 @@ int corto_use(
  */
 CORTO_EXPORT
 int corto_run(
-    char *identifier,
+    const char *identifier,
     int argc,
     char *argv[]);
 

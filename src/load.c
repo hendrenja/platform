@@ -64,10 +64,11 @@ int corto_load_fromDl(
 
 static
 char* corto_ptr_castToPath(
-    char* lib,
+    const char* lib,
     corto_id path)
 {
-    char *ptr, *bptr, ch;
+    char *bptr, ch;
+    const char *ptr;
     /* Convert '::' in library name to '/' */
     ptr = lib;
     bptr = path;
@@ -99,7 +100,7 @@ char* corto_ptr_castToPath(
 /* Lookup loaded library by name */
 static
 struct corto_loadedAdmin* corto_loadedAdminFind(
-    char* name)
+    const char* name)
 {
     if (loadedAdmin) {
         corto_iter iter = corto_ll_iter(loadedAdmin);
@@ -123,7 +124,7 @@ struct corto_loadedAdmin* corto_loadedAdminFind(
 /* Add file */
 static
 struct corto_loadedAdmin* corto_loadedAdminAdd(
-    char* library)
+    const char* library)
 {
     struct corto_loadedAdmin *lib = corto_calloc(sizeof(struct corto_loadedAdmin));
     lib->name = corto_strdup(library);
@@ -401,7 +402,7 @@ int corto_load_libraryAction(
 
 /* Load a package */
 int corto_load_intern(
-    char* str,
+    const char* str,
     int argc,
     char* argv[],
     bool try,
@@ -445,7 +446,7 @@ int corto_load_intern(
     }
 
     /* Get extension from filename */
-    if (!corto_file_extension(str, ext)) {
+    if (!corto_file_extension((char*)str, ext)) {
         goto error;
     }
 
@@ -497,7 +498,7 @@ int corto_load_intern(
             corto_throw(NULL);
             goto error;
         }
-        result = h->load(str, argc, argv, h->userData);
+        result = h->load((char*)str, argc, argv, h->userData);
     } else if (lib->filename) {
         if (lib->loading == corto_thread_self()) {
             goto recursive;
@@ -766,7 +767,7 @@ char* corto_locate(
     bool setLoadAdminWhenFound = TRUE;
     if (!loaded || (!result && loaded->loading)) {
         result = corto_locate_package(relativePath, &base, &dl, TRUE);
-        if (!result && (kind == CORTO_LOCATION_ENV)) {
+        if (!result && (kind != CORTO_LOCATION_LIB)) {
             corto_catch();
             result = corto_locate_package(package, &base, &dl, FALSE);
             setLoadAdminWhenFound = FALSE;
@@ -962,7 +963,7 @@ void corto_loaderOnExit(
 
 /* Load a package */
 int corto_use(
-    char* str,
+    const char* str,
     int argc,
     char* argv[])
 {
@@ -971,7 +972,7 @@ int corto_use(
 
 /* Run a package */
 int corto_run(
-    char* str,
+    const char* str,
     int argc,
     char* argv[])
 {

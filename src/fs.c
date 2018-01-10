@@ -649,6 +649,11 @@ int16_t corto_dir_iter(
     const char *filter,
     corto_iter *it_out)
 {
+    if (!name) {
+        corto_throw("invalid 'null' provided as directory name");
+        goto error;
+    }
+
     if (!filter) {
         corto_iter result = {
             .ctx = opendir(name),
@@ -672,6 +677,7 @@ int16_t corto_dir_iter(
 
             corto_ll files = corto_ll_new();
             if (corto_dir_collectRecursive(name, NULL, program, files)) {
+                corto_throw("dir_iter failed");
                 goto error;
             }
 
@@ -702,7 +708,6 @@ int16_t corto_dir_iter(
 
     return 0;
 error:
-    corto_throw("dir_iter failed");
     return -1;
 }
 
