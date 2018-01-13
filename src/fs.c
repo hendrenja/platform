@@ -138,12 +138,18 @@ int corto_cp_file(
     FILE *sourceFile = NULL;
     char *fullDst = (char*)dst;
     int perm = 0;
+    bool exists = corto_file_test(dst);
 
     /* If destination is a directory, copy into directory */
-    if (corto_file_test(dst) && corto_isdir(dst) && !corto_isdir(src)) {
+    if (exists && corto_isdir(dst) && !corto_isdir(src)) {
         const char *base = strrchr(src, '/');
         if (!base) base = src; else base = base + 1;
         fullDst = corto_asprintf("%s/%s", dst, base);
+        exists = corto_file_test(fullDst);
+    }
+
+    if (exists) {
+        corto_rm(fullDst);
     }
 
     if (!(sourceFile = fopen(src, "rb"))) {
