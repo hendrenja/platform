@@ -340,3 +340,20 @@ char* strreplace(char *orig, char *rep, char *with) {
     strcpy(tmp, orig);
     return result;
 }
+
+void strreverse(
+    char *str,
+    int length)
+{
+    int start = 0;
+    int end = length -1;
+    while (start < end)
+    {
+        char tmp = str[end];
+        str[end] = str[start];
+        str[start] = tmp;
+
+        start++;
+        end--;
+    }
+}

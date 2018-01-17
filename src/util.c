@@ -80,7 +80,9 @@ void corto_threadStringDealloc(void *tdata) {
 static char* g_num = "0123456789";
 static int nmax = 1;
 
-char* corto_itoa(int num, char* buff) {
+char* corto_itoa(
+    int num,
+    char* buff) {
     char* buffptr;
     unsigned int ch;
     unsigned int ntest;
@@ -129,46 +131,36 @@ char* corto_itoa(int num, char* buff) {
 
 char* corto_ulltoa(
     uint64_t value,
-    char *ptr,
+    char *str,
     int base) {
+    int i = 0;
 
-    uint64_t t = 0;
-    uint64_t res = 0;
-    uint64_t tmp = value;
-    int count = 0;
-
-    if (NULL == ptr) {
-        return NULL;
-    }
-
-    if (tmp == 0) {
-        count++;
-    }
-
-    while(tmp > 0)
+    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
+    if (value == 0)
     {
-        tmp = tmp/base;
-        count++;
+        str[i++] = '0';
+        str[i] = '\0';
+        return str;
     }
 
-    ptr += count;
-
-    *ptr = '\0';
-
-    do
+    // Process individual digits
+    while (value != 0)
     {
-        res = value - base * (t = value / base);
-        if (res < 10)
-        {
-            * --ptr = '0' + res;
+        int rem = value % base;
+        if (rem > 9) {
+            str[i++] = (rem-10) + 'a';
+        } else {
+            str[i++] = rem + '0';
         }
-        else if ((res >= 10) && (res < 16))
-        {
-            * -- ptr = 'A' - 10 + res;
-        }
-    } while ((value = t) != 0);
 
-    return ptr;
+        value = value / base;
+    }
+
+    str[i] = '\0';
+
+    strreverse(str, i);
+
+    return str;
 }
 
 int32_t corto_pathToArray(char *path, const char *elements[], char *sep) {
