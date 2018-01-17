@@ -127,6 +127,50 @@ char* corto_itoa(int num, char* buff) {
     return buffptr;
 }
 
+char* corto_ulltoa(
+    uint64_t value,
+    char *ptr,
+    int base) {
+
+    uint64_t t = 0;
+    uint64_t res = 0;
+    uint64_t tmp = value;
+    int count = 0;
+
+    if (NULL == ptr) {
+        return NULL;
+    }
+
+    if (tmp == 0) {
+        count++;
+    }
+
+    while(tmp > 0)
+    {
+        tmp = tmp/base;
+        count++;
+    }
+
+    ptr += count;
+
+    *ptr = '\0';
+
+    do
+    {
+        res = value - base * (t = value / base);
+        if (res < 10)
+        {
+            * --ptr = '0' + res;
+        }
+        else if ((res >= 10) && (res < 16))
+        {
+            * -- ptr = 'A' - 10 + res;
+        }
+    } while ((value = t) != 0);
+
+    return ptr;
+}
+
 int32_t corto_pathToArray(char *path, const char *elements[], char *sep) {
     int32_t count = 0;
     char *ptr = path;
