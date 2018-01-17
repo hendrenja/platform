@@ -214,6 +214,16 @@ char* strreplace(
     char *replace,
     char *with);
 
+/** Reverse string characters
+ *
+ * @param str Input string.
+ * @param length Input string length
+ */
+CORTO_EXPORT
+void strreverse(
+    char *str,
+    int length);
+
 #ifdef __cplusplus
 }
 #endif

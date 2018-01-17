@@ -57,6 +57,9 @@ extern "C" {
 /* Set intern TLS string */
 CORTO_EXPORT char* corto_setThreadString(char* string);
 
+CORTO_EXPORT char* corto_itoa(int num, char* buff);
+CORTO_EXPORT char* corto_ulltoa(uint64_t value, char *ptr, int base);
+
 #ifdef __cplusplus
 }
 #endif

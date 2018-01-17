@@ -80,7 +80,9 @@ void corto_threadStringDealloc(void *tdata) {
 static char* g_num = "0123456789";
 static int nmax = 1;
 
-char* corto_itoa(int num, char* buff) {
+char* corto_itoa(
+    int num,
+    char* buff) {
     char* buffptr;
     unsigned int ch;
     unsigned int ntest;
@@ -125,6 +127,40 @@ char* corto_itoa(int num, char* buff) {
     *buffptr = '\0';
 
     return buffptr;
+}
+
+char* corto_ulltoa(
+    uint64_t value,
+    char *str,
+    int base) {
+    int i = 0;
+
+    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
+    if (value == 0)
+    {
+        str[i++] = '0';
+        str[i] = '\0';
+        return str;
+    }
+
+    // Process individual digits
+    while (value != 0)
+    {
+        int rem = value % base;
+        if (rem > 9) {
+            str[i++] = (rem-10) + 'a';
+        } else {
+            str[i++] = rem + '0';
+        }
+
+        value = value / base;
+    }
+
+    str[i] = '\0';
+
+    strreverse(str, i);
+
+    return str;
 }
 
 int32_t corto_pathToArray(char *path, const char *elements[], char *sep) {
