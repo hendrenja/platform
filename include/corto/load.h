@@ -87,6 +87,7 @@ int corto_run(
 typedef enum corto_load_locateKind {
     CORTO_LOCATION_ENV,
     CORTO_LOCATION_LIB,
+    CORTO_LOCATION_APP,
     CORTO_LOCATION_ETC,
     CORTO_LOCATION_LIBPATH,
     CORTO_LOCATION_INCLUDE,

@@ -174,7 +174,8 @@ struct corto_fileHandler* corto_lookupExt(
 /* Convert package identifier to filename */
 static
 char* corto_load_packageToFile(
-    char* package)
+    char* package,
+    bool lib)
 {
     char* path;
 #ifdef CORTO_STANDALONE_LIB
@@ -191,7 +192,11 @@ char* corto_load_packageToFile(
         fileName = package;
     }
 
-    path = corto_asprintf("%s/lib%s.so", package, fileName);
+    if (lib) {
+        path = corto_asprintf("%s/lib%s.so", package, fileName);
+    } else {
+        path = corto_asprintf("%s/%s", package, fileName);
+    }
 #endif
     return path;
 }
@@ -732,7 +737,7 @@ char* corto_locate(
 #endif
 
     if (!result) {
-        relativePath = corto_load_packageToFile(package);
+        relativePath = corto_load_packageToFile(package, TRUE);
         if (!relativePath) {
             goto error;
         }
@@ -752,6 +757,7 @@ char* corto_locate(
         corto_dealloc(result);
         result = corto_strdup("");
         break;
+    case CORTO_LOCATION_APP:
     case CORTO_LOCATION_LIB:
         /* Result is already pointing to the lib */
         break;
@@ -769,7 +775,14 @@ char* corto_locate(
         result = corto_locate_package(relativePath, &base, &dl, TRUE);
         if (!result && (kind != CORTO_LOCATION_LIB)) {
             corto_catch();
-            result = corto_locate_package(package, &base, &dl, FALSE);
+            if (kind == CORTO_LOCATION_APP) {
+
+                free(relativePath);
+                relativePath = corto_load_packageToFile(package, FALSE);
+                result = corto_locate_package(relativePath, &base, &dl, FALSE);
+            } else {
+                result = corto_locate_package(package, &base, &dl, FALSE);
+            }
             setLoadAdminWhenFound = FALSE;
         }
     }
@@ -803,6 +816,7 @@ char* corto_locate(
             result = corto_asprintf(base, "@");
             *(strchr(result, '@') - 1) = '\0'; /* Also strip the '/' */
             break;
+        case CORTO_LOCATION_APP:
         case CORTO_LOCATION_LIB:
             /* Result is already pointing to the lib */
             break;
