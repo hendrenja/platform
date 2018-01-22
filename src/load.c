@@ -606,9 +606,7 @@ char* corto_locate_package(
     corto_log_push(strarg("locate:%s", lib));
 
     /* Look for local packages first */
-    if (!(targetLib = corto_asprintf("%s/%s", targetPath, lib))) {
-        goto error;
-    }
+    targetLib = corto_asprintf("%s/%s", targetPath, lib);
 
     if ((ret = corto_file_test(targetLib)) == 1) {
         corto_debug("found '%s'", targetLib);
@@ -770,18 +768,27 @@ char* corto_locate(
     }
 #else
 
+    bool isDirectory = false;
+    if (kind == CORTO_LOCATION_INCLUDE || kind == CORTO_LOCATION_ETC) {
+        isDirectory = true;
+    }
+
     bool setLoadAdminWhenFound = TRUE;
-    if (!loaded || (!result && loaded->loading)) {
-        result = corto_locate_package(relativePath, &base, &dl, TRUE);
+    if (!loaded || (!result && (loaded->loading || isDirectory))) {
+        if (!isDirectory) {
+            result = corto_locate_package(relativePath, &base, &dl, TRUE);
+        }
         if (!result && (kind != CORTO_LOCATION_LIB)) {
             corto_catch();
-            if (kind == CORTO_LOCATION_APP) {
 
+            if (kind == CORTO_LOCATION_APP) {
                 free(relativePath);
                 relativePath = corto_load_packageToFile(package, FALSE);
-                result = corto_locate_package(relativePath, &base, &dl, FALSE);
+                result = corto_locate_package(
+                    relativePath, &base, &dl, FALSE);
             } else {
-                result = corto_locate_package(package, &base, &dl, FALSE);
+                result = corto_locate_package(
+                    package, &base, &dl, FALSE);
             }
             setLoadAdminWhenFound = FALSE;
         }
