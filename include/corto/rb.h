@@ -71,7 +71,7 @@ void* corto_rb_findOrSetPtr(
     jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, NULL, FALSE, TRUE)
 
 CORTO_EXPORT
-void corto_rb_remove(
+void* corto_rb_remove(
     corto_rb tree,
     void* key);
 

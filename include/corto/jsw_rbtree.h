@@ -64,7 +64,7 @@ void         *jsw_rbfindPtr ( jsw_rbtree_t *tree, void *key );
 int           jsw_rbhaskey ( jsw_rbtree_t *tree, const void *key, void** data );
 int           jsw_rbhaskey_w_cmp ( jsw_rbtree_t *tree, const void *key, void** data, corto_equals_cb f_cmp );
 void*         jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite, bool returnPtr );
-int           jsw_rberase ( jsw_rbtree_t *tree, void *key );
+void*         jsw_rberase ( jsw_rbtree_t *tree, void *key );
 size_t        jsw_rbsize ( jsw_rbtree_t *tree );
 
 /* Get minimum and maximum */

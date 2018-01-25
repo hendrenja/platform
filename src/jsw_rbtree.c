@@ -433,8 +433,10 @@ void* jsw_rbinsert ( jsw_rbtree_t *tree, void* key, void *data, bool overwrite, 
   that the data was not found in the tree
   </remarks>
 */
-int jsw_rberase ( jsw_rbtree_t *tree, void *key )
+void* jsw_rberase ( jsw_rbtree_t *tree, void *key )
 {
+  void *result = NULL;
+  
   if ( tree->root != NULL ) {
     jsw_rbnode_t head = {0, NULL, NULL, {NULL,NULL}}; /* False tree root */
     jsw_rbnode_t *q, *p, *g; /* Helpers */
@@ -500,6 +502,7 @@ int jsw_rberase ( jsw_rbtree_t *tree, void *key )
 
     /* Replace and remove the saved node */
     if ( f != NULL ) {
+      result = f->data;
       f->key = q->key;
       f->data = q->data;
       p->link[p->link[1] == q] =
@@ -518,7 +521,7 @@ int jsw_rberase ( jsw_rbtree_t *tree, void *key )
   }
 
   tree->changes++;
-  return 1;
+  return result; /* Return old data */
 }
 
 /* Get minimum and maximum */

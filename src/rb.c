@@ -41,8 +41,8 @@ void corto_rb_set(corto_rb tree, const void* key, void* value) {
     jsw_rbinsert((jsw_rbtree_t*)tree, (void*)key, value, TRUE, FALSE);
 }
 
-void corto_rb_remove(corto_rb tree, void* key) {
-    jsw_rberase((jsw_rbtree_t*)tree, key);
+void* corto_rb_remove(corto_rb tree, void* key) {
+    return jsw_rberase((jsw_rbtree_t*)tree, key);
 }
 
 bool corto_rb_hasKey(corto_rb tree, const void* key, void** value) {
