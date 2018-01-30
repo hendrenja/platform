@@ -487,6 +487,11 @@ bool corto_raised(void);
 CORTO_EXPORT
 bool corto_raise(void);
 
+/** Try statement, if failed throw error and goto error.
+ *
+ */
+#define corto_try(stmt, msg) if (stmt) { corto_throw(msg); goto error; }
+
 /** Check for unraised exceptions (internal usage).
  */
 CORTO_EXPORT
