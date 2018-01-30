@@ -672,10 +672,9 @@ void corto_log_resetCursor(
     corto_log_tlsData *data)
 {
     int i;
-    for (i = 0; i < data->last_printed_len - 1; i ++) {
+    for (i = 0; i < data->last_printed_len; i ++) {
         fprintf(stderr, "\b");
     }
-    data->last_printed_len = 0;
 }
 
 static
@@ -1846,7 +1845,7 @@ void corto_log(char *fmt, ...) {
 
     /* If no newline is printed, keep track of how many backtrace characters
      * need to ba appended before printing the next log statement */
-    if (colorized[len - 1] != '\n') {
+    if (colorized[strlen(colorized) - 1] != '\n') {
         data->last_printed_len = len;
         corto_log_resetCursor(data);
         fflush(stderr);
