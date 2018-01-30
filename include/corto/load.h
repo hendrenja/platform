@@ -84,18 +84,17 @@ int corto_run(
     int argc,
     char *argv[]);
 
-typedef enum corto_load_locateKind {
-    CORTO_LOCATION_ENV,
-    CORTO_LOCATION_LIB,
-    CORTO_LOCATION_APP,
-    CORTO_LOCATION_ETC,
-    CORTO_LOCATION_LIBPATH,
-    CORTO_LOCATION_INCLUDE,
-    CORTO_LOCATION_NAME,
-    CORTO_LOCATION_FULLNAME
-} corto_load_locateKind;
+typedef enum corto_locate_kind {
+    CORTO_LOCATE_ENV,     /* environment, for example: /usr/local */
+    CORTO_LOCATE_LIB,     /* full path to library */
+    CORTO_LOCATE_APP,     /* full path to application */
+    CORTO_LOCATE_BIN,     /* full path to either library or application */
+    CORTO_LOCATE_ETC,     /* full path to project etc directory */
+    CORTO_LOCATE_INCLUDE, /* full path to project include directory */
+    CORTO_LOCATE_PACKAGE  /* full path to project directory */
+} corto_locate_kind;
 
-/** Locate a resource.
+/** Find project locations in the package hierarchy.
  * The `corto_locate` function can be used to locate a package on disk, and to
  * obtain information about the various locations associated with a package.
  *
@@ -120,24 +119,16 @@ typedef enum corto_load_locateKind {
  * the function returns a pointer to the library object through the `dl_out`
  * parameter.
  *
- * Through the `kind` parameter, the `corto_locate` function can return
- * information about the environment the package is installed in
- * (`CORTO_LOCATE_ENV`), the full library path (`CORTO_LOCATE_LIB`), the library
- * path without filename (`CORTO_LOCATE_LIBPATH`), the include path for the
- * package (`CORTO_LOCATE_INCLUDE`), the project name of the package
- * (`CORTO_LOCATE_NAME`) and the logical name of the package
- * (`CORTO_LOCATE_FULLNAME`).
- *
  * @param package A logical package name.
  * @param dl_out Will be set to library object, if already loaded.
  * @param kind Specify which information should be obtained from package.
  * @return The requested information.
  */
 CORTO_EXPORT
-char* corto_locate(
+const char* corto_locate(
     char *package,
     corto_dl *dl_out,
-    corto_load_locateKind kind);
+    corto_locate_kind kind);
 
 /** Load a resource from a library.
  * The `corto_load_sym` function looks up a function or global variable from a
