@@ -84,9 +84,9 @@ static void corto_buffer_init(corto_buffer *b) {
 /* Append a format string to a buffer */
 static bool corto_buffer_appendIntern(
     corto_buffer *b,
-    char* str,
+    const char* str,
     void *data,
-    uint32_t ___ (*copy)(char *dst, char *str, int32_t len, void *data))
+    uint32_t ___ (*copy)(char *dst, const char *str, int32_t len, void *data))
 {
     bool result = TRUE;
 
@@ -183,7 +183,7 @@ typedef struct corto_buffer_fmt_t {
 
 static uint32_t corto_buffer_fmtcpy(
     char *dst,
-    char *src,
+    const char *src,
     int32_t len,
     void *userData)
 {
@@ -194,7 +194,7 @@ static uint32_t corto_buffer_fmtcpy(
 
 bool corto_buffer_vappend(
     corto_buffer *b,
-    char* fmt,
+    const char* fmt,
     va_list args)
 {
     corto_buffer_fmt_t data;
@@ -215,7 +215,7 @@ bool corto_buffer_vappend(
 
 bool corto_buffer_append(
     corto_buffer *b,
-    char* fmt,
+    const char* fmt,
     ...)
 {
     corto_buffer_fmt_t data;
@@ -236,11 +236,12 @@ bool corto_buffer_append(
 
 static uint32_t corto_buffer_strcpy(
     char *dst,
-    char *src,
+    const char *src,
     int32_t len,
     void *userData)
 {
-    char *ptr, ch, *bptr = dst;
+    const char *ptr;
+    char *bptr = dst, ch;
     CORTO_UNUSED(userData);
 
     /* Prevent doing both a strcpy and a strlen */
@@ -255,7 +256,7 @@ static uint32_t corto_buffer_strcpy(
 
 bool corto_buffer_appendstr(
     corto_buffer *b,
-    char* str)
+    const char* str)
 {
     return corto_buffer_appendIntern(
         b, str, NULL, corto_buffer_strcpy
@@ -264,11 +265,12 @@ bool corto_buffer_appendstr(
 
 static uint32_t corto_buffer_strncpy(
     char *dst,
-    char *src,
+    const char *src,
     int32_t len,
     void *userData)
 {
-    char *ptr, ch, *bptr = dst;
+    const char *ptr;
+    char ch, *bptr = dst;
     uint32_t srclen = *(uint32_t*)userData;
 
     /* Prevent doing both a strcpy and a strlen */
@@ -283,7 +285,7 @@ static uint32_t corto_buffer_strncpy(
 
 bool corto_buffer_appendstrn(
     corto_buffer *b,
-    char* str,
+    const char* str,
     uint32_t len)
 {
     return corto_buffer_appendIntern(

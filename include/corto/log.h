@@ -58,7 +58,6 @@ extern "C" {
 #endif
 
 
-
 /* -- Setting & getting verbosity level -- */
 
 /* Error verbosity levels */

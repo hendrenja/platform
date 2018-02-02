@@ -126,7 +126,7 @@ typedef enum corto_locate_kind {
  */
 CORTO_EXPORT
 const char* corto_locate(
-    char *package,
+    const char *package,
     corto_dl *dl_out,
     corto_locate_kind kind);
 

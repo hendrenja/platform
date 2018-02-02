@@ -73,27 +73,27 @@ typedef struct corto_buffer {
  * Returns false when max is reached, true when there is still space */
 CORTO_EXPORT bool corto_buffer_append(
     corto_buffer *buffer,
-    char *fmt,
+    const char *fmt,
     ...);
 
 /* Append format string with argument list to a buffer.
  * Returns false when max is reached, true when there is still space */
 CORTO_EXPORT bool corto_buffer_vappend(
     corto_buffer *buffer,
-    char *fmt,
+    const char *fmt,
     va_list args);
 
 /* Append string to buffer.
  * Returns false when max is reached, true when there is still space */
 CORTO_EXPORT bool corto_buffer_appendstr(
     corto_buffer *buffer,
-    char *str);
+    const char *str);
 
 /* Append n characters to buffer.
  * Returns false when max is reached, true when there is still space */
 CORTO_EXPORT bool corto_buffer_appendstrn(
     corto_buffer *buffer,
-    char *str,
+    const char *str,
     uint32_t n);
 
 /* Return result string (also resets buffer) */

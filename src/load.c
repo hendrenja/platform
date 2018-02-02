@@ -286,7 +286,7 @@ int16_t corto_test_package(
 
 static
 int16_t corto_locate_package(
-    char* package,
+    const char* package,
     const char **env,
     const char **base)
 {
@@ -325,8 +325,8 @@ int16_t corto_locate_package(
 }
 
 static
-char* corto_locate_getName(
-    char* package)
+const char* corto_locate_getName(
+    const char* package)
 {
     if (package[0] == '/') {
         package ++;
@@ -342,10 +342,10 @@ char* corto_locate_getName(
 
 static
 int16_t corto_locate_binary(
-    char *id,
+    const char *id,
     struct corto_loaded *loaded)
 {
-    char *name = corto_locate_getName(id);
+    const char *name = corto_locate_getName(id);
     int16_t ret = 0;
 
     /* First test for library */
@@ -376,7 +376,7 @@ int16_t corto_locate_binary(
 }
 
 const char* corto_locate(
-    char* package,
+    const char* package,
     corto_dl *dl_out,
     corto_locate_kind kind)
 {

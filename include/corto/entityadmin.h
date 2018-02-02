@@ -22,8 +22,6 @@
 #ifndef CORTO_ENTITYADMIN_H_
 #define CORTO_ENTITYADMIN_H_
 
-
-
 typedef
 int (*corto_entityWalkAction)(
     void *e,
