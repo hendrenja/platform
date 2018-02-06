@@ -568,12 +568,17 @@ void corto_log_tail(char *str, ...);
 #define corto_info(...) if(_SHOULD_PRINT(CORTO_INFO)) { _corto_info(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #define corto_ok(...) if(_SHOULD_PRINT(CORTO_OK)) { _corto_ok(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);} else { __corto_raise_check(); }
 #define corto_log_overwrite(...) _corto_log_overwrite(__FILE__, __LINE__, CORTO_FUNCTION, __VA_ARGS__);
+#define corto_log_push_dbg(category) if(_SHOULD_PRINT(CORTO_TRACE)) {_corto_log_push(__FILE__, __LINE__, CORTO_FUNCTION, category);}
+#define corto_log_pop_dbg() if(_SHOULD_PRINT(CORTO_TRACE)) {_corto_log_pop(__FILE__, __LINE__, CORTO_FUNCTION);}
 #else
 #define corto_assert(condition, ...) (void)(condition)
 #define corto_debug(...)
 #define corto_trace(...)
 #define corto_info(...)
 #define corto_ok(...)
+#define corto_log_push_dbg(...)
+#define corto_log_pop_dbg(...)
+
 #endif
 
 #ifdef __cplusplus
