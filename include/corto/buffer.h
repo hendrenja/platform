@@ -47,10 +47,21 @@ extern "C" {
  */
 
 typedef struct corto_buffer_element {
-   char buf[CORTO_BUFFER_ELEMENT_SIZE + 1];
-   uint32_t pos;
-   struct corto_buffer_element *next;
+    bool buffer_embedded;
+    uint32_t pos;
+    char *buf;
+    struct corto_buffer_element *next;
 } corto_buffer_element;
+
+typedef struct corto_buffer_element_embedded {
+    corto_buffer_element super;
+    char buf[CORTO_BUFFER_ELEMENT_SIZE + 1];
+} corto_buffer_element_embedded;
+
+typedef struct corto_buffer_element_str {
+    corto_buffer_element super;
+    char *alloc_str;
+} corto_buffer_element_str;
 
 typedef struct corto_buffer {
     /* When set by an application, append will write to this buffer */
@@ -59,11 +70,14 @@ typedef struct corto_buffer {
     /* The maximum number of characters that may be printed */
     uint32_t max;
 
+    /* Size of elements minus current element */
+    uint32_t size;
+
     /* The number of elements in use */
     uint32_t elementCount;
 
     /* Always allocate at least one element */
-    corto_buffer_element firstElement;
+    corto_buffer_element_embedded firstElement;
 
     /* The current element being appended to */
     corto_buffer_element *current;
@@ -71,36 +85,56 @@ typedef struct corto_buffer {
 
 /* Append format string to a buffer.
  * Returns false when max is reached, true when there is still space */
-CORTO_EXPORT bool corto_buffer_append(
+CORTO_EXPORT
+bool corto_buffer_append(
     corto_buffer *buffer,
     const char *fmt,
     ...);
 
 /* Append format string with argument list to a buffer.
  * Returns false when max is reached, true when there is still space */
-CORTO_EXPORT bool corto_buffer_vappend(
+CORTO_EXPORT
+bool corto_buffer_vappend(
     corto_buffer *buffer,
     const char *fmt,
     va_list args);
 
 /* Append string to buffer.
  * Returns false when max is reached, true when there is still space */
-CORTO_EXPORT bool corto_buffer_appendstr(
+CORTO_EXPORT
+bool corto_buffer_appendstr(
+    corto_buffer *buffer,
+    const char *str);
+
+/* Append string to buffer, transfer ownership to buffer.
+ * Returns false when max is reached, true when there is still space */
+CORTO_EXPORT
+bool corto_buffer_appendstr_zerocpy(
+    corto_buffer *buffer,
+    char *str);
+
+/* Append string to buffer, do not free/modify string.
+ * Returns false when max is reached, true when there is still space */
+CORTO_EXPORT
+bool corto_buffer_appendstr_zerocpy_const(
     corto_buffer *buffer,
     const char *str);
 
 /* Append n characters to buffer.
  * Returns false when max is reached, true when there is still space */
-CORTO_EXPORT bool corto_buffer_appendstrn(
+CORTO_EXPORT
+bool corto_buffer_appendstrn(
     corto_buffer *buffer,
     const char *str,
     uint32_t n);
 
 /* Return result string (also resets buffer) */
-CORTO_EXPORT char *corto_buffer_str(corto_buffer *buffer);
+CORTO_EXPORT
+char *corto_buffer_str(corto_buffer *buffer);
 
 /* Reset buffer without returning a string */
-CORTO_EXPORT void corto_buffer_reset(corto_buffer *buffer);
+CORTO_EXPORT
+void corto_buffer_reset(corto_buffer *buffer);
 
 
 #ifdef __cplusplus

@@ -22,14 +22,43 @@
 #include <corto/platform.h>
 
 /* Add an extra element to the buffer */
-static void corto_buffer_grow(corto_buffer *b) {
+static
+void corto_buffer_grow(
+    corto_buffer *b)
+{
     /* Allocate new element */
-    corto_buffer_element *e = corto_alloc(sizeof(corto_buffer_element));
-    b->current->next = e;
-    b->current = e;
-    e->pos = 0;
-    e->next = NULL;
+    corto_buffer_element_embedded *e =
+        corto_alloc(sizeof(corto_buffer_element_embedded));
+    b->size += b->current->pos;
+    b->current->next = (corto_buffer_element*)e;
+    b->current = (corto_buffer_element*)e;
     b->elementCount ++;
+    e->super.buffer_embedded = true;
+    e->super.buf = e->buf;
+    e->super.pos = 0;
+    e->super.next = NULL;
+}
+
+/* Add an extra dynamic element */
+static
+void corto_buffer_grow_str(
+    corto_buffer *b,
+    char *str,
+    char *alloc_str,
+    uint32_t size)
+{
+    /* Allocate new element */
+    corto_buffer_element_str *e =
+        corto_alloc(sizeof(corto_buffer_element_str));
+    b->size += b->current->pos;
+    b->current->next = (corto_buffer_element*)e;
+    b->current = (corto_buffer_element*)e;
+    b->elementCount ++;
+    e->super.buffer_embedded = false;
+    e->super.pos = size ? size : strlen(str);
+    e->super.next = NULL;
+    e->super.buf = str;
+    e->alloc_str = alloc_str;
 }
 
 static char* corto_buffer_ptr(corto_buffer *b) {
@@ -40,55 +69,68 @@ static char* corto_buffer_ptr(corto_buffer *b) {
     }
 }
 
-/* Copy string to element */
-static void corto_buffer_copy(
-    corto_buffer *b,
-    char* str,
-    uint32_t len)
-{
-    memcpy(corto_buffer_ptr(b), str, len);
-    b->current->pos += len;
-}
-
 /* Compute the amount of space left in the current element */
-static int32_t corto_buffer_spaceLeftInCurrentElement(corto_buffer *b) {
-    if (b->buf) {
-        return b->max - b->current->pos;
-    } else {
+static int32_t corto_buffer_memLeftInCurrentElement(corto_buffer *b) {
+    if (b->current->buffer_embedded) {
         return CORTO_BUFFER_ELEMENT_SIZE - b->current->pos;
+    } else {
+        return 0;
     }
 }
 
 /* Compute the amount of space left */
-static int32_t corto_buffer_spaceLeft(corto_buffer *b) {
-    if (b->buf) {
-        return corto_buffer_spaceLeftInCurrentElement(b);
+static int32_t corto_buffer_memLeft(corto_buffer *b) {
+    if (b->max) {
+        return b->max - b->size - b->current->pos;
     } else {
-        return
-          b->max -
-            ((b->elementCount - 1) * CORTO_BUFFER_ELEMENT_SIZE) -
-            (b->current->pos);
+        return INT_MAX;
     }
 }
 
 static void corto_buffer_init(corto_buffer *b) {
     /* Initialize buffer structure only once */
     if (!b->elementCount) {
-        b->firstElement.next = NULL;
-        b->firstElement.pos = 0;
+        b->firstElement.super.next = NULL;
+        b->firstElement.super.pos = 0;
+        b->firstElement.super.buffer_embedded = true;
+        b->firstElement.super.buf = b->firstElement.buf;
         b->elementCount ++;
-        b->current = &b->firstElement;
+        b->current = (corto_buffer_element*)&b->firstElement;
     }
 }
 
+/* Quick custom function to copy a maxium number of characters and
+ * simultaneously determine length of source string. */
+static
+unsigned int fast_strncpy(
+    char * dst,
+    const char * src,
+    unsigned int n_cpy,
+    unsigned int n)
+{
+    const char *ptr, *orig = src;
+    char ch;
+
+    for (ptr = src; (ch = *ptr) && (ptr - orig < n); ptr ++) {
+        if (ptr - orig < n_cpy) {
+            *dst = ch;
+            dst ++;
+        }
+    }
+
+    return ptr - orig;
+}
+
 /* Append a format string to a buffer */
-static bool corto_buffer_appendIntern(
+static bool corto_buffer_append_intern(
     corto_buffer *b,
     const char* str,
-    void *data,
-    uint32_t ___ (*copy)(char *dst, const char *str, int32_t len, void *data))
+    unsigned int n,
+    bool fmt_string,
+    va_list args)
 {
     bool result = TRUE;
+    va_list arg_cpy;
 
     if (!str) {
         return result;
@@ -96,100 +138,99 @@ static bool corto_buffer_appendIntern(
 
     corto_buffer_init(b);
 
-    int32_t spaceLeftInElement = corto_buffer_spaceLeftInCurrentElement(b);
-    int32_t spaceLeft = corto_buffer_spaceLeft(b);
+    int32_t memLeftInElement = corto_buffer_memLeftInCurrentElement(b);
+    int32_t memLeft = corto_buffer_memLeft(b);
 
-    /* Compute the memory required to add the string to the buffer */
-    int32_t memRequired = copy(
-        corto_buffer_ptr(b),
-        str,
-        (b->max && (spaceLeft < spaceLeftInElement)) ? spaceLeft : spaceLeftInElement + 1,
-        data);
-
-    if (b->max && (spaceLeft < memRequired)) {
-        result = FALSE;
+    if (!memLeft) {
+        return false;
     }
 
-    /* If the string required more memory than was available in the element,
-     * grow the buffer */
-    else if (memRequired >= spaceLeftInElement) {
-        /* If writing to a user-provided buffer, the max is reached and append
-         * should return false. Otherwise, the buffer needs to grow with extra
-         * elements. */
-        b->current->pos += spaceLeftInElement;
-        if (!b->buf) {
-            /* If the extra required memory doesn't exceed the elementsize, grow
-             * a new element, vsnprintf into the element and then memmove to
-             * truncate the part that was already added to the previous
-             * element */
+    /* Compute the memory required to add the string to the buffer. If user
+     * provided buffer, use space left in buffer, otherwise use space left in
+     * current element. */
+    int32_t max_copy = b->buf ? memLeft : memLeftInElement;
+    int32_t memRequired;
+
+    if (!n) n = INT_MAX;
+
+    if (!fmt_string) {
+        memRequired = fast_strncpy(corto_buffer_ptr(b), str, max_copy, n);
+    } else {
+        va_copy(arg_cpy, args);
+        memRequired = vsnprintf(corto_buffer_ptr(b), max_copy + 1, str, args);
+    }
+
+    if (memRequired <= memLeftInElement) {
+        /* Element was large enough to fit string */
+        b->current->pos += memRequired;
+    } else if ((memRequired - memLeftInElement) < memLeft) {
+        /* Element was not large enough, but buffer still has space */
+        if (!fmt_string) {
+            b->current->pos += memLeftInElement;
+            memRequired -= memLeftInElement;
+
+            /* Current element was too small, copy remainder into new element */
             if (memRequired < CORTO_BUFFER_ELEMENT_SIZE) {
+                /* A standard-size buffer is large enough for the new string */
                 corto_buffer_grow(b);
-                int32_t len = 0;
 
-                if (b->max && (spaceLeft < CORTO_BUFFER_ELEMENT_SIZE)) {
-                    len = spaceLeft;
-                    result = FALSE;
+                /* Copy the remainder to the new buffer */
+                if (n) {
+                    /* If a max number of characters to write is set, only a
+                     * subset of the string should be copied to the buffer */
+                    strncpy(
+                        corto_buffer_ptr(b),
+                        str + memLeftInElement,
+                        memRequired);
                 } else {
-                    len = memRequired - spaceLeftInElement;
+                    strcpy(corto_buffer_ptr(b), str + memLeftInElement);
                 }
 
-                copy(corto_buffer_ptr(b), str, CORTO_BUFFER_ELEMENT_SIZE, data);
-                memmove(
-                    corto_buffer_ptr(b),
-                    corto_buffer_ptr(b) + spaceLeftInElement,
-                    len);
-                b->current->pos = len;
-
-            /* If the extra memory required exceeds the elementSize, allocate a
-             * temporary string that will hold the full value, then distribute
-             * the results over the new elements */
+                /* Update to number of characters copied to new buffer */
+                b->current->pos += memRequired;
             } else {
-                char* dst = corto_alloc(memRequired + 1);
-                char *ptr = dst + spaceLeftInElement;
-                int32_t memLeft = memRequired - spaceLeftInElement;
-
-                /* Copy entire string to heap memory */
-                copy(dst, str, memRequired + 1, data);
-
-                /* Copy string to elements */
-                while (memLeft > 0) {
-                    corto_buffer_grow(b);
-                    if (memLeft > CORTO_BUFFER_ELEMENT_SIZE) {
-                        corto_buffer_copy(b, ptr, CORTO_BUFFER_ELEMENT_SIZE);
-                        ptr += CORTO_BUFFER_ELEMENT_SIZE;
-                        memLeft -= CORTO_BUFFER_ELEMENT_SIZE;
-                    } else {
-                        corto_buffer_copy(b, ptr, memLeft);
-                        memLeft = 0;
-                    }
-                }
-                corto_dealloc(dst);
+                char *remainder = corto_strdup(str + memLeftInElement);
+                corto_buffer_grow_str(b, remainder, remainder, memRequired);
             }
         } else {
-            result = FALSE;
+            /* If string is a format string, a new buffer of size memRequired is
+             * needed to re-evaluate the format string and only use the part that
+             * wasn't already copied to the previous element */
+            if (memRequired <= CORTO_BUFFER_ELEMENT_SIZE) {
+                /* Resulting string fits in standard-size buffer. Note that the
+                 * entire string needs to fit, not just the remainder, as the
+                 * format string cannot be partially evaluated */
+                corto_buffer_grow(b);
+
+                /* Copy entire string to new buffer */
+                vsprintf(corto_buffer_ptr(b), str, arg_cpy);
+
+                /* Ignore the part of the string that was copied into the
+                 * previous buffer. The string copied into the new buffer could
+                 * be memmoved so that only the remainder is left, but that is
+                 * most likely more expensive than just keeping the entire
+                 * string. */
+
+                /* Update position in buffer */
+                b->current->pos += memRequired;
+            } else {
+                /* Resulting string does not fit in standard-size buffer.
+                 * Allocate a new buffer that can hold the entire string. */
+                char *dst = corto_alloc(memRequired + 1);
+                vsprintf(dst, str, arg_cpy);
+                corto_buffer_grow_str(b, dst, dst, memRequired);
+            }
         }
     } else {
-        b->current->pos += memRequired;
+        /* Buffer max has been reached */
+        result = false;
+    }
+
+    if (fmt_string) {
+        va_end(arg_cpy);
     }
 
     return result;
-}
-
-typedef struct corto_buffer_fmt_t {
-    va_list args;
-    va_list argcpy;
-    int8_t call;
-} corto_buffer_fmt_t;
-
-static uint32_t corto_buffer_fmtcpy(
-    char *dst,
-    const char *src,
-    int32_t len,
-    void *userData)
-{
-    corto_buffer_fmt_t *data = userData;
-    data->call ++;
-    return vsnprintf(dst, len, src, data->call == 1 ? data->args: data->argcpy);
 }
 
 bool corto_buffer_vappend(
@@ -197,18 +238,9 @@ bool corto_buffer_vappend(
     const char* fmt,
     va_list args)
 {
-    corto_buffer_fmt_t data;
-
-    va_copy(data.args, args);
-    va_copy(data.argcpy, args);
-    data.call = 0;
-
-    bool result = corto_buffer_appendIntern(
-        b, fmt, &data, corto_buffer_fmtcpy
+    bool result = corto_buffer_append_intern(
+        b, fmt, 0, true, args
     );
-
-    va_end(data.args);
-    va_end(data.argcpy);
 
     return result;
 }
@@ -218,69 +250,14 @@ bool corto_buffer_append(
     const char* fmt,
     ...)
 {
-    corto_buffer_fmt_t data;
-
-    va_start(data.args, fmt);
-    va_copy(data.argcpy, data.args);
-    data.call = 0;
-
-    bool result = corto_buffer_appendIntern(
-        b, fmt, &data, corto_buffer_fmtcpy
+    va_list args;
+    va_start(args, fmt);
+    bool result = corto_buffer_append_intern(
+        b, fmt, 0, true, args
     );
-
-    va_end(data.args);
-    va_end(data.argcpy);
+    va_end(args);
 
     return result;
-}
-
-static uint32_t corto_buffer_strcpy(
-    char *dst,
-    const char *src,
-    int32_t len,
-    void *userData)
-{
-    const char *ptr;
-    char *bptr = dst, ch;
-    CORTO_UNUSED(userData);
-
-    /* Prevent doing both a strcpy and a strlen */
-    for(ptr = src; (ch = *ptr); ptr++) {
-        if ((ptr - src) < len) {
-            *(bptr++) = ch;
-        }
-    }
-
-    return ptr - src;
-}
-
-bool corto_buffer_appendstr(
-    corto_buffer *b,
-    const char* str)
-{
-    return corto_buffer_appendIntern(
-        b, str, NULL, corto_buffer_strcpy
-    );
-}
-
-static uint32_t corto_buffer_strncpy(
-    char *dst,
-    const char *src,
-    int32_t len,
-    void *userData)
-{
-    const char *ptr;
-    char ch, *bptr = dst;
-    uint32_t srclen = *(uint32_t*)userData;
-
-    /* Prevent doing both a strcpy and a strlen */
-    for(ptr = src; (ch = *ptr) && ((ptr - src) < srclen); ptr++) {
-        if ((ptr - src) < len) {
-            *(bptr++) = ch;
-        }
-    }
-
-    return srclen;
 }
 
 bool corto_buffer_appendstrn(
@@ -288,8 +265,35 @@ bool corto_buffer_appendstrn(
     const char* str,
     uint32_t len)
 {
-    return corto_buffer_appendIntern(
-        b, str, &len, corto_buffer_strncpy
+    return corto_buffer_append_intern(
+        b, str, len, false, NULL
+    );
+}
+
+bool corto_buffer_appendstr_zerocpy(
+    corto_buffer *b,
+    char* str)
+{
+    corto_buffer_grow_str(b, str, str, 0);
+    return true;
+}
+
+bool corto_buffer_appendstr_zerocpy_const(
+    corto_buffer *b,
+    const char* str)
+{
+    /* Removes const modifier, but logic prevents changing / delete string */
+    corto_buffer_grow_str(b, (char*)str, NULL, 0);
+    return true;
+}
+
+
+bool corto_buffer_appendstr(
+    corto_buffer *b,
+    const char* str)
+{
+    return corto_buffer_append_intern(
+        b, str, 0, false, NULL
     );
 }
 
@@ -301,10 +305,9 @@ char* corto_buffer_str(corto_buffer *b) {
             result = corto_strdup(b->buf);
         } else {
             void *next = NULL;
-            uint32_t len = (b->elementCount - 1) * CORTO_BUFFER_ELEMENT_SIZE +
-                b->current->pos + 1;
+            uint32_t len = b->size + b->current->pos + 1;
 
-            corto_buffer_element *e = &b->firstElement;
+            corto_buffer_element *e = (corto_buffer_element*)&b->firstElement;
 
             result = corto_alloc(len);
             char* ptr = result;
@@ -313,7 +316,10 @@ char* corto_buffer_str(corto_buffer *b) {
                 memcpy(ptr, e->buf, e->pos);
                 ptr += e->pos;
                 next = e->next;
-                if (e != &b->firstElement) {
+                if (e != &b->firstElement.super) {
+                    if (!e->buffer_embedded) {
+                        free(((corto_buffer_element_str*)e)->alloc_str);
+                    }
                     corto_dealloc(e);
                 }
             } while ((e = next));
@@ -332,10 +338,10 @@ char* corto_buffer_str(corto_buffer *b) {
 void corto_buffer_reset(corto_buffer *b) {
     if (b->elementCount && !b->buf) {
         void *next = NULL;
-        corto_buffer_element *e = &b->firstElement;
+        corto_buffer_element *e = (corto_buffer_element*)&b->firstElement;
         do {
             next = e->next;
-            if (e != &b->firstElement) {
+            if (e != (corto_buffer_element*)&b->firstElement) {
                 corto_dealloc(e);
             }
         } while ((e = next));
