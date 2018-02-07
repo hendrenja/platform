@@ -111,7 +111,7 @@ unsigned int fast_strncpy(
     const char *ptr, *orig = src;
     char ch;
 
-    for (ptr = src; (ch = *ptr) && (ptr - orig < n); ptr ++) {
+    for (ptr = src; (ptr - orig < n) && (ch = *ptr); ptr ++) {
         if (ptr - orig < n_cpy) {
             *dst = ch;
             dst ++;
@@ -274,6 +274,7 @@ bool corto_buffer_appendstr_zerocpy(
     corto_buffer *b,
     char* str)
 {
+    corto_buffer_init(b);
     corto_buffer_grow_str(b, str, str, 0);
     return true;
 }
@@ -283,6 +284,7 @@ bool corto_buffer_appendstr_zerocpy_const(
     const char* str)
 {
     /* Removes const modifier, but logic prevents changing / delete string */
+    corto_buffer_init(b);
     corto_buffer_grow_str(b, (char*)str, NULL, 0);
     return true;
 }
