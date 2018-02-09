@@ -151,7 +151,7 @@ static bool corto_buffer_append_intern(
     int32_t max_copy = b->buf ? memLeft : memLeftInElement;
     int32_t memRequired;
 
-    if (n == -1) n = INT_MAX;
+    if (n < 0) n = INT_MAX;
 
     if (!fmt_string) {
         memRequired = fast_strncpy(corto_buffer_ptr(b), str, max_copy, n);
