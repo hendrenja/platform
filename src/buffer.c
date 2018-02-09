@@ -151,7 +151,7 @@ static bool corto_buffer_append_intern(
     int32_t max_copy = b->buf ? memLeft : memLeftInElement;
     int32_t memRequired;
 
-    if (!n) n = INT_MAX;
+    if (n == -1) n = INT_MAX;
 
     if (!fmt_string) {
         memRequired = fast_strncpy(corto_buffer_ptr(b), str, max_copy, n);
@@ -239,7 +239,7 @@ bool corto_buffer_vappend(
     va_list args)
 {
     bool result = corto_buffer_append_intern(
-        b, fmt, 0, true, args
+        b, fmt, -1, true, args
     );
 
     return result;
@@ -253,7 +253,7 @@ bool corto_buffer_append(
     va_list args;
     va_start(args, fmt);
     bool result = corto_buffer_append_intern(
-        b, fmt, 0, true, args
+        b, fmt, -1, true, args
     );
     va_end(args);
 
@@ -295,7 +295,7 @@ bool corto_buffer_appendstr(
     const char* str)
 {
     return corto_buffer_append_intern(
-        b, str, 0, false, NULL
+        b, str, -1, false, NULL
     );
 }
 
